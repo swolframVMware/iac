@@ -1,0 +1,51 @@
+---
+# Copyright (c) Broadcom. All Rights Reserved.
+# The term "Broadcom" refers solely to the Broadcom Inc. corporate affiliate that
+# distributes this software.
+#
+# You are hereby granted a non-exclusive, worldwide, royalty-free license under
+# Broadcom's copyrights to use, copy, modify, and distribute this software in source
+# code or binary form for use in connection with Broadcom products.
+#
+# This copyright notice shall be included in all copies or substantial portions of the
+# software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+# PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+# CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+# OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+# ----------------------------------------------------------------------------------- #
+# Role: sddc_manager.cluster_hosts
+# ----------------------------------------------------------------------------------- #
+# Description:
+# This file contains the default values for the role to work as expected.
+# ----------------------------------------------------------------------------------- #
+
+# Desired state of cluster host membership.
+# Valid values: present, absent
+cluster_hosts_state: present
+
+# Template name for add hosts payload
+add_hosts_template_name: "add_hosts.j2"
+
+# Maximum hosts allowed in cluster (safety check for scale-out)
+# Set to 0 or omit to disable the check.
+maximum_cluster_hosts: 64
+
+# Force addition even if exceeding maximum
+force_host_addition: false
+
+# Template name for remove hosts payload
+remove_hosts_template_name: "remove_hosts.j2"
+
+# Minimum hosts required in cluster (safety check for scale-in)
+# Set to 0 or omit to disable the check.
+minimum_cluster_hosts: 3
+
+# Force removal even if below minimum
+force_host_removal: false
+
+# Decommission unassigned/unusable hosts after hosts are removed from the cluster.
+cluster_hosts_decommission_hosts: true

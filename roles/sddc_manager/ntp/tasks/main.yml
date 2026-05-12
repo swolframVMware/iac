@@ -1,0 +1,41 @@
+---
+# Copyright (c) Broadcom. All Rights Reserved.
+# The term "Broadcom" refers solely to the Broadcom Inc. corporate affiliate that
+# distributes this software.
+#
+# You are hereby granted a non-exclusive, worldwide, royalty-free license under
+# Broadcom's copyrights to use, copy, modify, and distribute this software in source
+# code or binary form for use in connection with Broadcom products.
+#
+# This copyright notice shall be included in all copies or substantial portions of the
+# software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+# PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+# CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+# OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+# ----------------------------------------------------------------------------------- #
+# Role: sddc_manager.ntp
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This role is responsible for updating ntp configuration in a
+#   VMware Cloud Foundation instance.
+# ----------------------------------------------------------------------------------- #
+
+- name: Find NTP in IaC Configuration
+  ansible.builtin.set_fact:
+    ntp_config:
+      ntpServers: "{{ all_iac_vars.ntp | map('regex_replace', '^(.*)$', '{\"ipAddress\": \"\\1\"}') | map('from_json') | list | default(none) }}"
+
+- name: Fail if NTP Not Found
+  ansible.builtin.fail:
+    msg: "NTP is not found in IaC configuration at vsphere.ntp"
+  when: ntp_config is none
+
+- name: Validate NTP Configuration
+  ansible.builtin.include_tasks: validate_ntp_config.yml
+
+- name: Update NTP Configuration
+  ansible.builtin.include_tasks: update_ntp_config.yml

@@ -1,0 +1,23 @@
+clusterExpansionSpec:
+  deployWithoutLicenseKeys: true
+  hostSpecs:
+{% set hosts_to_process = hosts_ready_to_add | default(hosts_input | default([])) %}
+{% if hosts_to_process | length > 0 %}
+{% for host_fqdn in hosts_to_process %}
+    - hostName: {{ host_fqdn }}
+      id: {{ unassigned_usable_host_ids[host_fqdn].id }}
+      hostNetworkSpec:
+        vmNics:
+{% for cluster in vsphere.datacenter.clusters %}
+{% if cluster.name == cluster_input %}
+{% for vds in vsphere.networking.distributed_switches %}
+{% for uplink in vds.uplinks %}
+          - id: {{ uplink.vmnic }}
+            uplink: {{ uplink.id }}
+            vdsName: {{ cluster.name }}-{{ vds.name }}
+{% endfor %}
+{% endfor %}
+{% endif %}
+{% endfor %}
+{% endfor %}
+{% endif %}

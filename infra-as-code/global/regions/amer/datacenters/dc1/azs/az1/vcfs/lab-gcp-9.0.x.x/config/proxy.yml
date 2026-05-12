@@ -1,0 +1,31 @@
+---
+# ----------------------------------------------------------------------------------- #
+# Proxy Configuration
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This file contains the proxy configuration for the VMware Cloud Foundation
+#   instance.
+#
+#   To enable or disable the proxy, use the appropriate playbook:
+#     - Use 'enable_proxy.yml' to enable the proxy with these settings.
+#     - Use 'disable_proxy.yml' to disable the proxy.
+#
+# Options:
+#   host: IP address or FQDN of proxy server
+#   port: Port number of proxy server
+#   protocol: http | https (default: http)
+#   authenticate: true | false (default: false)
+#   username: Username for proxy authentication (required if authenticate is true)
+#   password: Password for proxy authentication (required if authenticate is true)
+#
+# Note:
+#   Proxy configuration cannot be completely removed due to API limitations.
+# ----------------------------------------------------------------------------------- #
+
+proxy:
+  host: "proxy.corp.internal"
+  port: 3128
+  protocol: https
+  authenticate: true
+  username: "vcf"
+  password: "{{ vault_proxy_password }}"

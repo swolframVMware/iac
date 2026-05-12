@@ -1,0 +1,14 @@
+---
+# ----------------------------------------------------------------------------------- #
+# License Server Configuration
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This file contains the instance-level configuration for the VMware Cloud
+#   Foundation instance.
+#
+# Required Configuration:
+#   - license.hostname: FQDN for the license server.
+# ----------------------------------------------------------------------------------- #
+
+license:
+  hostname: flt-lc01.rainpole.io

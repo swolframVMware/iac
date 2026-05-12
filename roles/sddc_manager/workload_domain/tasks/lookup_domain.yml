@@ -1,0 +1,46 @@
+---
+# Copyright (c) Broadcom. All Rights Reserved.
+# The term "Broadcom" refers solely to the Broadcom Inc. corporate affiliate that
+# distributes this software.
+#
+# You are hereby granted a non-exclusive, worldwide, royalty-free license under
+# Broadcom's copyrights to use, copy, modify, and distribute this software in source
+# code or binary form for use in connection with Broadcom products.
+#
+# This copyright notice shall be included in all copies or substantial portions of the
+# software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+# PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+# CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+# OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+# ----------------------------------------------------------------------------------- #
+# Role: sddc_manager.workload_domain
+# Task: Lookup Workload Domain ID by Name
+# ----------------------------------------------------------------------------------- #
+# Description:
+# This task looks up a workload domain ID by its name.
+# ----------------------------------------------------------------------------------- #
+
+- name: Display Status Message
+  ansible.builtin.debug:
+    msg: "{{ ansible_check_mode | ternary('Check Mode: Would lookup', 'Looking up') }} workload domain '{{ domain_name | default(domain) | default(all_iac_vars.domain.name) }}' ID."
+
+- name: Lookup Workload Domain ID by Name
+  broadcom.vcf.sddc_manager_workload_domain_info:
+    sddc_manager_hostname: "{{ all_iac_vars.sddc_manager.hostname }}"
+    sddc_manager_user: "{{ all_iac_vars.vsphere.vcenter.sso.username }}"
+    sddc_manager_password: "{{ sddc_manager_admin_password | default(all_iac_vars.sddc_manager.admin_password) }}"
+    domain: "{{ domain_name | default(domain) | default(all_iac_vars.domain.name) }}"
+  register: workload_domain_info
+
+- name: Extract Workload Domain ID and Name
+  ansible.builtin.set_fact:
+    workload_domain_id: "{{ workload_domain_info.domain.id }}"
+    workload_domain_name: "{{ workload_domain_info.domain.name }}"
+
+- name: Display Status Message
+  ansible.builtin.debug:
+    msg: "{{ ansible_check_mode | ternary('Check Mode: Would have returned', 'Returned') }} workload domain '{{ workload_domain_name }}' with ID '{{ workload_domain_id }}'."

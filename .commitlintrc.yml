@@ -1,0 +1,75 @@
+---
+# Conventional Commit Configuration
+# Reference: https://commitlint.js.org/
+
+rules:
+  # Enforce allowed commit types.
+  type-enum:
+    - 2
+    - always
+    - - chore
+      - docs
+      - refactor
+      - feat
+      - fix
+      - style
+      - test
+      - ci
+      - build
+      - perf
+
+  # Type must be lowercase.
+  type-case:
+    - 2
+    - always
+    - lower-case
+
+  # Type is required.
+  type-empty:
+    - 2
+    - never
+
+  # Subject must be lowercase.
+  subject-case:
+    - 2
+    - always
+    - lower-case
+
+  # Subject line max length (50 characters).
+  subject-max-length:
+    - 2
+    - always
+    - 50
+
+  # Subject cannot be empty/blank.
+  subject-empty:
+    - 2
+    - never
+
+  # Subject must use imperative mood (enforced by convention).
+  subject-full-stop:
+    - 2
+    - never
+    - '.'
+
+  # Body should have blank line before it.
+  body-leading-blank:
+    - 1
+    - always
+
+  # Footer should have blank line before it.
+  footer-leading-blank:
+    - 1
+    - always
+
+# Type definitions (for documentation):
+# - chore: maintenance tasks (e.g., dependency updates)
+# - docs: documentation changes
+# - refactor: code restructuring without changing functionality
+# - feat: new features
+# - fix: bug fixes
+# - style: formatting, missing semicolons, etc.
+# - test: adding or updating tests
+# - ci: CI/CD pipeline changes
+# - build: build system changes
+# - perf: performance improvements

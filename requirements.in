@@ -1,0 +1,14 @@
+# Ansible
+ansible-core>=2.15
+
+# VMware vSphere Python SDK
+pyvmomi>=9.0.0.0
+
+# VMware vSphere Cloud Foundation Python SDK
+vcf-sdk>=9.0.0.0
+
+# HTTP library for API calls
+requests>=2.32.0
+
+# JSON query library
+jmespath>=1.0.1

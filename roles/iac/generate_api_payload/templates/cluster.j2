@@ -1,0 +1,111 @@
+{% set ns = namespace() %}
+{% for one_cluster in vsphere.datacenter.clusters %}
+{% if one_cluster.name == cluster_input %}
+{% set ns.cluster_found = one_cluster %}
+{% endif %}
+{% endfor %}
+
+{% set ns.vds_overlay = None %}
+{% for vds in vsphere.networking.distributed_switches %}
+{% if vds.name == nsx.transport_zone.overlay.port_groups[0].vds_name %}
+{% set ns.vds_overlay = vds %}
+{% endif %}
+{% endfor %}
+{% set uplink_profile_name = ns.cluster_found.name ~ '-' ~ ns.vds_overlay.uplink_name %}
+
+domainId: {{ domain_id }}
+computeSpec:
+  clusterSpecs:
+    - name: {{ ns.cluster_found.name }}
+      clusterImageId: {{ lcm_image_id }}
+      hostSpecs:
+{% for cluster in vsphere.datacenter.clusters %}
+{% if cluster.name == cluster_input %}
+{% set hosts_to_process = hosts_input | default([]) %}
+{% for host in cluster.esx_hosts %}
+{% if not hosts_input | default([]) or host.hostname in hosts_to_process %}
+        - id: {{ unassigned_usable_host_ids[host.hostname].id }}
+          hostname: "{{ host.hostname }}"
+          hostNetworkSpec:
+            vmNics:
+{% for vds in vsphere.networking.distributed_switches %}
+{% for uplink in vds.uplinks %}
+              - id: {{ uplink.vmnic }}
+                uplink: {{ uplink.id }}
+                vdsName: {{ ns.cluster_found.name }}-{{ vds.name }}
+{% endfor %}
+{% endfor %}
+{% endif %}
+{% endfor %}
+{% endif %}
+{% endfor %}
+      datastoreSpec:
+        vsanDatastoreSpec:
+          datastoreName: {{ ns.cluster_found.storage.vsan.datastore_name }}
+          dedupAndCompressionEnabled: {{ ns.cluster_found.storage.vsan.enable_vsan_deduplication | default(false) }}
+{% if ns.cluster_found.storage.vsan.vsan_type == 'esa' %}
+          esaConfig:
+            enabled: {{ ns.cluster_found.storage.vsan.enable_vsan_esa | default(true) }}
+            vsanMaxConfig:
+              enableVsanMax: {{ ns.cluster_found.storage.vsan.enable_vsan_max | default(false) }}
+{% else %}
+          failuresToTolerate: {{ ns.cluster_found.storage.vsan.failures_to_tolerate | default(1) }}
+{% endif %}
+      networkSpec:
+        vdsSpecs:
+{% for vds in vsphere.networking.distributed_switches %}
+          - name: {{ ns.cluster_found.name }}-{{ vds.name }}
+            mtu: {{ vds.mtu }}
+            portGroupSpecs:
+{% for key, pg in ns.cluster_found.mgmt_port_groups.items() if pg.vds_name == vds.name %}
+              - name: {{ pg.name }}
+                transportType: {{ key }}
+                activeUplinks: {{ pg.active_uplinks }}
+                standbyUplinks: {{ pg.standby_uplinks }}
+                teamingPolicy: {{ pg.teaming_policy }}
+{% endfor %}
+{% if vds.name == nsx.transport_zone.overlay.port_groups[0].vds_name %}
+            nsxtSwitchConfig:
+              hostSwitchOperationalMode: STANDARD
+              transportZones:
+                - name: nsx-vlan-transportzone
+                  transportType: VLAN
+                - name: {{ nsx.transport_zone.overlay.name }}
+                  transportType: OVERLAY
+{% endif %}
+{% endfor %}
+        nsxClusterSpec:
+          nsxTClusterSpec:
+            uplinkProfiles:
+{% if ns.vds_overlay %}
+              - name: {{ uplink_profile_name }}
+                transportVlan: {{ nsx.transport_zone.overlay.port_groups[0].vlan }}
+                teamings:
+                  - name: {{ ns.vds_overlay.teaming.name }}
+                    policy: {{ ns.vds_overlay.teaming.policy }}
+                    activeUplinks: {{ ns.vds_overlay.active_uplinks }}
+                    standByUplinks: {{ ns.vds_overlay.standby_uplinks }}
+{% endif %}
+            ipAddressPoolsSpec:
+              - name: {{ nsx.transport_zone.overlay.port_groups[0].name }}
+        networkProfiles:
+          - name: required-field-value-not-used
+            isDefault: true
+            nsxtHostSwitchConfigs:
+              - vdsName: {{ ns.cluster_found.name }}-{{ nsx.transport_zone.overlay.port_groups[0].vds_name }}
+                ipAddressPoolName: {{ nsx.transport_zone.overlay.port_groups[0].name }}
+                uplinkProfileName: {{ uplink_profile_name }}
+                vdsUplinkToNsxUplink:
+{% if ns.vds_overlay %}
+{% for uplink in ns.vds_overlay.uplinks %}
+                  - vdsUplinkName: {{ uplink.id }}
+                    nsxUplinkName: {{ uplink.nsx }}
+{% endfor %}
+{% endif %}
+      advancedOptions:
+        evcMode: {{ ns.cluster_found.evc_mode }}
+        highAvailability:
+          enabled: {{ ns.cluster_found.high_availability | default(false) }}
+      skipThumbprintValidation: {{ ns.cluster_found.skip_thumbprint_validation | default(false) }}
+  skipFailedHosts: {{ ns.cluster_found.skip_failed_hosts | default(false) }}
+deployWithoutLicenseKeys: true

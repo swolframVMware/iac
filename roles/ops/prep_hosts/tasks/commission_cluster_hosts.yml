@@ -1,0 +1,56 @@
+---
+# Copyright (c) Broadcom. All Rights Reserved.
+# The term "Broadcom" refers solely to the Broadcom Inc. corporate affiliate that
+# distributes this software.
+#
+# You are hereby granted a non-exclusive, worldwide, royalty-free license under
+# Broadcom's copyrights to use, copy, modify, and distribute this software in source
+# code or binary form for use in connection with Broadcom products.
+#
+# This copyright notice shall be included in all copies or substantial portions of the
+# software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+# PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+# CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+# OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+# ----------------------------------------------------------------------------------- #
+# Role: ops.prep_hosts
+# Task: Commission Cluster Hosts
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This task is responsible for commissioning ESX hosts for a VMware Cloud Foundation
+#   instance for a specific cluster.
+# ----------------------------------------------------------------------------------- #
+
+- name: Filter Hosts for Cluster
+  ansible.builtin.set_fact:
+    cluster_esx_hosts: >-
+      {{
+        current_cluster.esx_hosts | map(attribute='hostname') | list
+        if cluster_input is not defined
+        else (esx_hosts | default([]))
+      }}
+
+- name: Display Skip Message
+  ansible.builtin.debug:
+    msg: "No hosts to commission for cluster '{{ current_cluster.name }}'."
+  when: cluster_esx_hosts | length == 0
+
+- name: Display Status Message
+  ansible.builtin.debug:
+    msg: "Commissioning hosts for cluster '{{ current_cluster.name }}'."
+  when: cluster_esx_hosts | length > 0
+
+- name: Commission Hosts for Cluster Using Host Role
+  ansible.builtin.include_role:
+    name: broadcom.vcf.sddc_manager.host
+  vars:
+    host_state: present
+    cluster_input: "{{ current_cluster.name }}"
+    hosts_input: "{{ cluster_esx_hosts }}"
+    commission_hosts_subset: "{{ cluster_esx_hosts }}"
+    esx_host_password: "{{ esx_host_password }}"
+  when: cluster_esx_hosts | length > 0

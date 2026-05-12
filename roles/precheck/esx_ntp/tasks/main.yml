@@ -1,0 +1,51 @@
+---
+# Copyright (c) Broadcom. All Rights Reserved.
+# The term "Broadcom" refers solely to the Broadcom Inc. corporate affiliate that
+# distributes this software.
+#
+# You are hereby granted a non-exclusive, worldwide, royalty-free license under
+# Broadcom's copyrights to use, copy, modify, and distribute this software in source
+# code or binary form for use in connection with Broadcom products.
+#
+# This copyright notice shall be included in all copies or substantial portions of the
+# software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+# PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+# CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+# OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+# ----------------------------------------------------------------------------------- #
+# Role: precheck.esx_ntp
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This role performs verification of NTP server configuration on ESX hosts to ensure
+#   they are properly set up before host operations in a VMware Cloud Foundation
+#   instance.
+# ----------------------------------------------------------------------------------- #
+
+- name: Check ESX Host NTP Configuration
+  broadcom.vcf.precheck_esx_ntp:
+    esx_hosts: "{{ esx_host_list }}"
+    esx_host_user: "{{ esx_host_user | default('root') }}"
+    esx_host_password: "{{ esx_host_password | default(all_iac_vars.vsphere.esx_root_password) }}"
+    esx_ntp_servers: "{{ all_iac_vars.ntp }}"
+    validate_certs: "{{ all_iac_vars.precheck.validate_certs }}"
+  register: esx_ntp_service
+
+- broadcom.vcf.redact_debug:
+    var: esx_ntp_service
+
+- name: "{{ all_iac_vars.precheck.esx_service_state | capitalize }} NTP Service on ESX Hosts"
+  broadcom.vcf.precheck_esx_service:
+    esx_hosts: "{{ esx_host_list }}"
+    esx_host_user: "{{ esx_host_user | default('root') }}"
+    esx_host_password: "{{ esx_host_password | default(all_iac_vars.vsphere.esx_root_password) }}"
+    esx_service_name: "{{ all_iac_vars.precheck.esx_service_name_ntp }}"
+    esx_service_state: "{{ all_iac_vars.precheck.esx_service_state }}"
+    validate_certs: "{{ all_iac_vars.precheck.validate_certs }}"
+  register: esx_ntp_service
+
+- broadcom.vcf.redact_debug:
+    var: esx_ntp_service

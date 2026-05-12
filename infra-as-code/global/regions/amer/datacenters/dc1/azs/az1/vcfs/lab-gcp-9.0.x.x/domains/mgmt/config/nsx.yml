@@ -1,0 +1,101 @@
+---
+# ----------------------------------------------------------------------------------- #
+# NSX Configuration
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This file contains the domain-level configuration for the VMware Cloud Foundation
+#   instance.
+# ----------------------------------------------------------------------------------- #
+
+nsx:
+  deployment:
+    use_existing_deployment: false
+    vip:
+      hostname: nsxlb-dc1-az1-mg.corp.internal
+    nodes: # 1 (Single) or 3 (HA) nodes. Only include the amount of nodes you need
+      - hostname: nsx1-dc1-az1-mg.corp.internal
+      - hostname: nsx2-dc1-az1-mg.corp.internal
+      - hostname: nsx3-dc1-az1-mg.corp.internal
+  transport_zone:
+    overlay:
+      name: vcf-host-tep-v40
+      port_groups:
+        - type: host_overlay
+          name: VCF-Created-Overlay-Zone # Additional clusters use this for now
+          description: ESX Host Overlay TEP IP Pool
+          subnet: 172.16.40.0/24
+          gateway: 172.16.40.253
+          vlan: 40
+          vds_name: vds01
+          inclusion_range:
+            - start_ip_address: 172.16.40.1
+              end_ip_address: 172.16.40.32
+  edge_cluster:
+    name: ec1-dc1-az1-mg
+    type: NSX-T
+    root_password: "{{ vault_edge_root_password }}"
+    admin_password: "{{ vault_edge_admin_password }}"
+    audit_password: "{{ vault_edge_audit_password }}"
+    form_factor: LARGE
+    tier_0_services_high_availability: ACTIVE_STANDBY # ACTIVE_ACTIVE
+    mtu: 8900
+    tier_0_routing_type: EBGP
+    asn: 65001
+    tier_0_name: t0-dc1-az1-mg
+    skip_tep_routability_check: false
+    first_nsx_vds_uplink: uplink1
+    second_nsx_vds_uplink: uplink2
+    profile:
+      type: DEFAULT # CUSTOM. profile items below are needed for CUSTOM
+      # name: ecprof-dc1-az1-mg
+      # bfd_allowed_hop: 5
+      # bfd_declare_dead_multiple: 3
+      # bfd_probe_interval: 1000
+      # standby_relocation_threshold: 30
+    edge_nodes:
+      - node_name: eg1-dc1-az1-mg.corp.internal
+        management_ip: 172.16.10.80/24
+        management_gateway: 172.16.10.253
+        vm_management_portgroup_vlan: 10
+        vm_management_portgroup_name: dc1-az1-cl1-vds1-pg-vm-mgmt-v10
+        tep_1_ip: 172.16.50.10/24
+        tep_2_ip: 172.16.50.11/24
+        tep_gateway: 172.16.50.253
+        tep_vlan: 50
+        inter_rack_cluster: false
+        uplink_network:
+          - uplink_vlan: 60
+            uplink_interface_ip: 172.16.60.10/24
+            bgp_peers:
+              ip: 172.16.60.253/24
+              asn: 64546
+              password: "{{ vault_bgp_peer_password }}"
+          - uplink_vlan: 70
+            uplink_interface_ip: 172.16.70.10/24
+            bgp_peers:
+              ip: 172.16.70.253/24
+              asn: 64546
+              password: "{{ vault_bgp_peer_password }}"
+      - node_name: eg2-dc1-az1-mg.corp.internal
+        management_ip: 172.16.10.81/24
+        management_gateway: 172.16.10.253
+        vm_management_portgroup_vlan: 10
+        vm_management_portgroup_name: dc1-az1-cl1-vds1-pg-vm-mgmt-v10
+        tep_1_ip: 172.16.50.12/24
+        tep_2_ip: 172.16.50.13/24
+        tep_gateway: 172.16.50.253
+        tep_vlan: 50
+        inter_rack_cluster: false
+        uplink_network:
+          - uplink_vlan: 60
+            uplink_interface_ip: 172.16.60.11/24
+            bgp_peers:
+              ip: 172.16.60.253/24
+              asn: 64546
+              password: "{{ vault_bgp_peer_password }}"
+          - uplink_vlan: 70
+            uplink_interface_ip: 172.16.70.11/24
+            bgp_peers:
+              ip: 172.16.70.253/24
+              asn: 64546
+              password: "{{ vault_bgp_peer_password }}"

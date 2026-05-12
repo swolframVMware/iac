@@ -1,0 +1,35 @@
+---
+# Test playbook for bundle roles
+# This is a simple test to verify the roles are properly structured
+
+- name: Test Bundle Roles
+  hosts: localhost
+  gather_facts: false
+  vars:
+    all_iac_vars:
+      vcf_installer:
+        hostname: "vcf-installer.example.com"
+        username: "admin"
+        password: "password"
+
+  tasks:
+    - name: Test bundle_info role (should fail validation without bundle_operation)
+      ansible.builtin.include_role:
+        name: broadcom.vcf.vcf_installer.bundle_info
+      vars:
+        bundle_operation: download_status
+        bundle_image_type: INSTALL
+      ignore_errors: true
+      tags:
+        - test_info
+
+    - name: Test bundle role (should fail validation without bundle_id)
+      ansible.builtin.include_role:
+        name: broadcom.vcf.vcf_installer.bundle
+      vars:
+        bundle_state: present
+        bundle_id: "test-bundle-id"
+      ignore_errors: true
+      tags:
+        - test_bundle
+

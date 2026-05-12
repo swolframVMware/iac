@@ -1,0 +1,104 @@
+---
+# ----------------------------------------------------------------------------------- #
+# vSphere Configuration
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This file contains the domain-level configuration for the VMware Cloud Foundation
+#   instance.
+# ----------------------------------------------------------------------------------- #
+
+vsphere:
+  vcenter:
+    hostname: vc-dc1-az1-mg.corp.internal
+    subnet_mask: 255.255.255.0
+    gateway: 172.16.10.253
+    use_existing_deployment: false
+  datacenter:
+    name: dc1-az1-mg-dc01
+    clusters:
+      - name: dc1-az1-mg-cl01 # bring-up json will take first element
+        evc_mode: ''
+        high_availability: true
+        host_pool: # ip pools for vsan and vmotion. additional clusters use this pool
+          name: dc1-az1-mg-np01
+          networks:
+            - VSAN
+            - VMOTION
+        mgmt_port_groups:
+          MANAGEMENT:
+            name: dc1-az1-mg-cl01-vds01-pg-esx-mgmt-v0
+            vds_name: vds01
+            type: mgmt
+            teaming_policy: loadbalance_loadbased
+            active_uplinks:
+              - uplink1
+              - uplink2
+            standby_uplinks: []
+            vlan: 0
+            mtu: 1500
+            subnet: 192.168.0.0/16
+            gateway: 192.168.0.253
+            subnetMask: null
+          VMOTION:
+            name: dc1-az1-mg-cl01-vds01-pg-vmotion-v20
+            vds_name: vds01
+            type: vmotion
+            teaming_policy: loadbalance_loadbased
+            active_uplinks:
+              - uplink1
+              - uplink2
+            standby_uplinks: []
+            vlan: 20
+            mtu: 8900
+            subnet: 172.16.20.0/24
+            gateway: 172.16.20.253
+            subnetMask: null
+            inclusion_range:
+              - start_ip_address: 172.16.20.1
+                end_ip_address: 172.16.20.32
+          VSAN:
+            name: dc1-az1-mg-cl01-vds02-pg-vsan-v30
+            vds_name: vds02
+            type: vsan
+            teaming_policy: loadbalance_loadbased
+            active_uplinks:
+              - uplink1
+              - uplink2
+            standby_uplinks: []
+            vlan: 30
+            mtu: 8900
+            subnet: 172.16.30.0/24
+            gateway: 172.16.30.253
+            subnetMask: null
+            inclusion_range:
+              - start_ip_address: 172.16.30.1
+                end_ip_address: 172.16.30.16
+          VM_MANAGEMENT: # Only needed for mgmt domain
+            name: dc1-az1-mg-cl01-vds01-pg-vm-mgmt-v10
+            vds_name: vds01
+            type: vm-mgmt
+            teaming_policy: loadbalance_loadbased
+            active_uplinks:
+              - uplink1
+              - uplink2
+            standby_uplinks: []
+            vlan: 10
+            mtu: 8900
+            subnet: 172.16.10.0/24
+            gateway: 172.16.10.253
+            subnetMask: null
+        storage:
+          vsan:
+            datastore_name: dc1-az1-mg-cl01-vsan01
+            vsan_type: esa
+            enable_vsan_esa: true
+        vds_connection:
+          - vds_name: vds01 # mgmt, vm-mgmt, vmotion, overlay
+          - vds_name: vds02 # vsan
+        esx_hosts:
+          - hostname: esx-01a.corp.internal
+          - hostname: esx-02a.corp.internal
+          - hostname: esx-03a.corp.internal
+          - hostname: esx-04a.corp.internal
+          # - hostname: esx-05a.corp.internal
+          # - hostname: esx-06a.corp.internal

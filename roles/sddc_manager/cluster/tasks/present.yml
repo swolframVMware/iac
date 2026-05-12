@@ -1,0 +1,51 @@
+---
+# Copyright (c) Broadcom. All Rights Reserved.
+# The term "Broadcom" refers solely to the Broadcom Inc. corporate affiliate that
+# distributes this software.
+#
+# You are hereby granted a non-exclusive, worldwide, royalty-free license under
+# Broadcom's copyrights to use, copy, modify, and distribute this software in source
+# code or binary form for use in connection with Broadcom products.
+#
+# This copyright notice shall be included in all copies or substantial portions of the
+# software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+# PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+# CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+# OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+# ----------------------------------------------------------------------------------- #
+# Role: sddc_manager.cluster
+# Task: Ensure Cluster is Present
+# ----------------------------------------------------------------------------------- #
+# Description:
+# This task ensures that a specified cluster is added in a VMware Cloud
+# Foundation instance. The task performs the following steps:
+# - Get domain and LCM image information.
+# - Check host status for cluster allocation.
+# - Generate the cluster payload.
+# - Validate the cluster payload.
+# - Add the cluster.
+# ----------------------------------------------------------------------------------- #
+
+- name: Get Domain Information
+  ansible.builtin.include_role:
+    name: broadcom.vcf.sddc_manager.workload_domain_info
+
+- name: Get LCM Image Information
+  ansible.builtin.include_role:
+    name: broadcom.vcf.sddc_manager.lcm_image_info
+
+- name: Check Hosts for Cluster Allocation
+  ansible.builtin.include_tasks: check_hosts_status.yml
+
+- name: Generate Add Cluster Payload
+  ansible.builtin.include_tasks: generate_add_payload.yml
+
+- name: Validate Add Cluster Payload
+  ansible.builtin.include_tasks: validate_add_cluster.yml
+
+- name: Add Cluster to Workload Domain
+  ansible.builtin.include_tasks: add_cluster.yml

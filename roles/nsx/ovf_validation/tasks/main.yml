@@ -1,0 +1,10 @@
+---
+- name: Enable OVF Validation
+  ansible.builtin.include_tasks: present.yml
+  loop: "{{ nsx_managers }}"
+  when: ovf_validation_state == 'present'
+  
+- name: Disable OVF Validation
+  ansible.builtin.include_tasks: absent.yml
+  loop: "{{ nsx_managers }}"
+  when: ovf_validation_state | lower == 'absent'

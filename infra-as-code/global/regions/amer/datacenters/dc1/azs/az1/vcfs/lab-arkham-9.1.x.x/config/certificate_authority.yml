@@ -1,0 +1,44 @@
+---
+# ----------------------------------------------------------------------------------- #
+# Certificate Authority Configuration
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This file contains the instance-level configuration for the VMware Cloud
+#   Foundation instance.
+#
+#   To configure certificate authority, use the appropriate playbook:
+#     - Use 'update_certificate_authority.yml' to configure the certificate
+#       authority with these settings.
+#
+# Options:
+#   type: openssl | microsoft - Type of certificate authority to configure
+#
+#   Microsoft CA Configuration (when type: microsoft):
+#     server: FQDN of the Microsoft Certificate Authority
+#     username: Username to authenticate with the Microsoft Certificate Authority
+#     password: Password to authenticate with the Microsoft Certificate Authority
+#     template_name: Certificate template name configured on the Microsoft Certificate Authority
+#
+#   OpenSSL CA Configuration (when type: openssl):
+#     common_name: Common name for the certificate authority
+#     organization: Organization name for the certificate authority
+#     organization_unit: Organization unit for the certificate authority
+#     locality: Locality/City for the certificate authority
+#     state: State/Province for the certificate authority
+#     country: Country code (2-letter) for the certificate authority
+# ----------------------------------------------------------------------------------- #
+
+certificate_authority:
+  type: microsoft
+  microsoft:
+    server: "arkham-dc01.arkham.io"
+    username: "svc-vcf-ca"
+    password: "{{ vault_certificate_authority_microsoft_password }}"
+    template_name: "VMware"
+  openssl:
+    common_name: "sfo-vcf01.sfo.rainpole.io"
+    organization: "Rainpole"
+    organization_unit: "Platform Engineering"
+    locality: "San Francisco"
+    state: "California"
+    country: "US"

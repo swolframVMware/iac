@@ -1,0 +1,49 @@
+---
+# Copyright (c) Broadcom. All Rights Reserved.
+# The term "Broadcom" refers solely to the Broadcom Inc. corporate affiliate that
+# distributes this software.
+#
+# You are hereby granted a non-exclusive, worldwide, royalty-free license under
+# Broadcom's copyrights to use, copy, modify, and distribute this software in source
+# code or binary form for use in connection with Broadcom products.
+#
+# This copyright notice shall be included in all copies or substantial portions of the
+# software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+# PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+# CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+# OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+# ----------------------------------------------------------------------------------- #
+# Role: precheck.esx_precheck
+# Task: ESX precheck for a new VCF instance
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This task checks the pre-requisites for ESX hosts in a new VCF instance.
+# ----------------------------------------------------------------------------------- #
+
+- name: Initialize ESX Hosts from Inventory
+  ansible.builtin.include_role:
+    name: broadcom.vcf.precheck.get_esx_hosts
+
+- name: Check ESX Host Connectivity
+  ansible.builtin.include_role:
+    name: broadcom.vcf.precheck.esx_connection
+
+- name: Check ESX Host Certificate
+  ansible.builtin.include_role:
+    name: broadcom.vcf.precheck.esx_certificate
+
+- name: Check ESX Host Standard Switch
+  ansible.builtin.include_role:
+    name: broadcom.vcf.precheck.esx_standard_switch
+
+- name: Check ESX Host SSH Service
+  ansible.builtin.include_role:
+    name: broadcom.vcf.precheck.esx_ssh
+
+- name: Check ESX Host NTP Configuration
+  ansible.builtin.include_role:
+    name: broadcom.vcf.precheck.esx_ntp

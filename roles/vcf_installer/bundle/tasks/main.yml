@@ -1,0 +1,101 @@
+---
+# Copyright (c) Broadcom. All Rights Reserved.
+# The term "Broadcom" refers solely to the Broadcom Inc. corporate affiliate that
+# distributes this software.
+#
+# You are hereby granted a non-exclusive, worldwide, royalty-free license under
+# Broadcom's copyrights to use, copy, modify, and distribute this software in source
+# code or binary form for use in connection with Broadcom products.
+#
+# This copyright notice shall be included in all copies or substantial portions of the
+# software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+# PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+# CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+# OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+# ----------------------------------------------------------------------------------- #
+# Role: vcf_installer.bundle
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This role is responsible for managing bundle operations in a VCF Installer
+#   instance. It can download, cancel, or delete bundles.
+# ----------------------------------------------------------------------------------- #
+
+- name: Validate Bundle State Variable
+  ansible.builtin.assert:
+    that:
+      - bundle_state is defined
+      - bundle_state in ['present', 'stopped', 'absent']
+    fail_msg: "bundle_state must be defined and set to 'present', 'stopped', or 'absent'"
+
+- name: Validate Bundle ID Variable
+  ansible.builtin.assert:
+    that:
+      - bundle_id is defined
+      - bundle_id | length > 0
+    fail_msg: "bundle_id must be defined and cannot be empty"
+
+- name: Find Bundle Configuration in IaC
+  ansible.builtin.set_fact:
+    bundle_iac_config: "{{ all_iac_vars.bundle | default(none) }}"
+
+- name: Set Bundle Download Options from IaC
+  ansible.builtin.set_fact:
+    bundle_wait_for_completion: "{{ bundle_wait_for_completion | default(bundle_iac_config.download_options.wait_for_completion | default(false)) }}"
+    bundle_timeout: "{{ bundle_timeout | default(bundle_iac_config.download_options.timeout | default(3600)) }}"
+  when:
+    - bundle_iac_config is not none
+    - bundle_state == 'present'
+
+- name: Manage Bundle
+  broadcom.vcf.vcf_installer_bundle:
+    vcf_installer_hostname: "{{ all_iac_vars.vcf_installer.hostname }}"
+    vcf_installer_user: "{{ all_iac_vars.vcf_installer.username | default('admin@local') }}"
+    vcf_installer_password: "{{ vcf_installer_password | default(all_iac_vars.vcf_installer.password) }}"
+    state: "{{ bundle_state }}"
+    bundle_id: "{{ bundle_id }}"
+    binary_files_only: "{{ bundle_binary_files_only | default(false) }}"
+    wait_for_completion: "{{ bundle_wait_for_completion | default(false) }}"
+    timeout: "{{ bundle_timeout | default(3600) }}"
+  register: bundle_result
+
+- name: Display Bundle Result
+  ansible.builtin.debug:
+    msg: "{{ bundle_result.msg }}"
+  when: bundle_result is defined
+
+- name: Wait for Bundle Operation
+  ansible.builtin.pause:
+    seconds: 5
+  when:
+    - not ansible_check_mode
+    - bundle_result.changed
+    - bundle_state in ['downloaded', 'cancelled']
+    - not bundle_wait_for_completion | default(false)
+
+- name: Verify Bundle Status
+  broadcom.vcf.vcf_installer_bundle_info:
+    vcf_installer_hostname: "{{ all_iac_vars.vcf_installer.hostname }}"
+    vcf_installer_user: "{{ all_iac_vars.vcf_installer.username | default('admin@local') }}"
+    vcf_installer_password: "{{ vcf_installer_password | default(all_iac_vars.vcf_installer.password) }}"
+    operation: download_status
+    bundle_id: "{{ bundle_id }}"
+  register: bundle_verify_result
+  when:
+    - not ansible_check_mode
+    - bundle_result.changed
+    - bundle_state in ['downloaded', 'cancelled']
+    - not bundle_wait_for_completion | default(false)
+
+- name: Display Bundle Verification Result
+  ansible.builtin.debug:
+    msg: "{{ bundle_verify_result.msg }}"
+  when:
+    - not ansible_check_mode
+    - bundle_result.changed
+    - bundle_state in ['downloaded', 'cancelled']
+    - not bundle_wait_for_completion | default(false)
+    - bundle_verify_result is defined

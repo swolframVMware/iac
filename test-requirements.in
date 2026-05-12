@@ -1,0 +1,11 @@
+# Base Requirements
+-r requirements.in
+
+# Testing
+pip-tools>=7.5.1
+pytest>=8.0.0
+ansible>=12.0.0
+ansible-core>=2.15.0
+
+# Code Quality
+ruff>=0.14.0

@@ -1,0 +1,18 @@
+---
+# ----------------------------------------------------------------------------------- #
+# Lifecycle Management Configuration
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This file contains the instance-level configuration for the VMware Cloud
+#   Foundation instance.
+#
+# Required Configuration:
+#   - lcm.sddc.hostname:  FQDN for the SDDC lifecycle management.
+#   - lcm.fleet.hostname: FQDN for the fleet lifecycle management.
+# ----------------------------------------------------------------------------------- #
+
+lcm:
+  sddc:
+    hostname: vsp-instance-dc1.corp.internal
+  fleet:
+    hostname: vsp-fleet-dc1.corp.internal

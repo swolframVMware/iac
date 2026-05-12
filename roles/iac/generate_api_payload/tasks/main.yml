@@ -1,0 +1,24 @@
+---
+- name: flatten top-level IaC vars
+  ansible.builtin.set_fact:
+    "{{ var_item.key }}": "{{ var_item.value }}"
+  with_dict: "{{ all_iac_vars }}"
+  loop_control:
+    loop_var: var_item
+    label: "{{ var_item.key }}"
+
+- name: load template - {{ local_render_filepath }}...
+  ansible.builtin.template:
+    src: "{{ template_name }}"
+    dest: "{{ local_render_filepath }}"
+  check_mode: no
+  changed_when: false
+
+- ansible.builtin.include_vars:
+    file: "{{ local_render_filepath }}"
+    name: api_payload_json
+  check_mode: no
+  changed_when: false
+
+# - broadcom.vcf.redact_debug:
+#    var: api_payload_json

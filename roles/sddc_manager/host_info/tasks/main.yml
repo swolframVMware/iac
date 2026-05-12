@@ -1,0 +1,21 @@
+# ----------------------------------------------------------------------------------- #
+# Role: sddc_manager.host_info
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This role retrieves ESX host information from SDDC Manager.
+#   Supports filtering by status, querying specific hosts, and output formatting.
+# ----------------------------------------------------------------------------------- #
+
+- name: Get ESX Host Information
+  broadcom.vcf.sddc_manager_host_info:
+    sddc_manager_hostname: "{{ all_iac_vars.sddc_manager.hostname }}"
+    sddc_manager_user: "{{ all_iac_vars.vsphere.vcenter.sso.username }}"
+    sddc_manager_password: "{{ vcenter_administrator_password | default(all_iac_vars.vsphere.vcenter.sso.password) }}"
+    fqdn: "{{ host_fqdn | default(omit) }}"
+    host_status: "{{ host_status_filter | default(omit) }}"
+    format: "{{ host_info_format | default('info') }}"
+  register: hosts_info_result
+
+- name: Set Hosts Information Fact
+  ansible.builtin.set_fact:
+    hosts_info: "{{ hosts_info_result.meta }}"

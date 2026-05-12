@@ -1,0 +1,115 @@
+---
+# Copyright (c) Broadcom. All Rights Reserved.
+# The term "Broadcom" refers solely to the Broadcom Inc. corporate affiliate that
+# distributes this software.
+#
+# You are hereby granted a non-exclusive, worldwide, royalty-free license under
+# Broadcom's copyrights to use, copy, modify, and distribute this software in source
+# code or binary form for use in connection with Broadcom products.
+#
+# This copyright notice shall be included in all copies or substantial portions of the
+# software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+# PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+# CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+# OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+# ----------------------------------------------------------------------------------- #
+# Role: sddc_manager.cluster_hosts
+# Task: Check Hosts Can Be Safely Removed
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This task validates that hosts can be safely removed from a cluster.
+#   It checks if hosts exist in the cluster and ensures minimum host count is maintained.
+# ----------------------------------------------------------------------------------- #
+
+- name: Get Current Cluster Host IDs
+  ansible.builtin.set_fact:
+    current_cluster_host_ids: "{{ cluster_info.cluster.hosts | map(attribute='id') | list }}"
+
+- name: Fetch Full Host Information for Each Host in Cluster
+  broadcom.vcf.sddc_manager_host_info:
+    sddc_manager_hostname: "{{ all_iac_vars.sddc_manager.hostname }}"
+    sddc_manager_user: "{{ all_iac_vars.vsphere.vcenter.sso.username }}"
+    sddc_manager_password: "{{ vcenter_administrator_password | default(all_iac_vars.vsphere.vcenter.sso.password) }}"
+  register: all_hosts_info
+
+- name: Build Host ID to FQDN Mapping
+  ansible.builtin.set_fact:
+    host_id_to_fqdn: "{{ host_id_to_fqdn | default({}) | combine({item.id: item.fqdn}) }}"
+  loop: "{{ all_hosts_info.meta | dict2items | map(attribute='value') | selectattr('id', 'in', current_cluster_host_ids) | list }}"
+  loop_control:
+    label: "{{ item.fqdn | default('unknown') }}"
+
+- name: Extract Current Cluster Host FQDNs
+  ansible.builtin.set_fact:
+    current_cluster_host_fqdns: "{{ current_cluster_host_ids | map('extract', host_id_to_fqdn) | list }}"
+
+- name: Build FQDN to ID Mapping for Cluster Hosts
+  ansible.builtin.set_fact:
+    current_cluster_hosts_with_fqdns: "{{ current_cluster_hosts_with_fqdns | default([]) + [{'id': item, 'fqdn': host_id_to_fqdn[item]}] }}"
+  loop: "{{ current_cluster_host_ids }}"
+  loop_control:
+    label: "{{ host_id_to_fqdn[item] | default('unknown') }}"
+
+- name: Validate Hosts to Remove Are in Cluster
+  ansible.builtin.set_fact:
+    hosts_not_in_cluster: "{{ hosts_input | difference(current_cluster_host_fqdns) }}"
+
+- name: Fail if Hosts Not in Cluster
+  ansible.builtin.fail:
+    msg: "The following hosts are not in cluster '{{ cluster_input }}': {{ hosts_not_in_cluster | join(', ') }}"
+  when: hosts_not_in_cluster | length > 0
+
+- name: Calculate Remaining Host Count
+  ansible.builtin.set_fact:
+    remaining_host_count: "{{ (current_cluster_host_fqdns | length) - (hosts_input | length) }}"
+
+- name: Display Host Removal Summary
+  ansible.builtin.debug:
+    msg:
+      - "Number of Existing Hosts: {{ current_cluster_host_fqdns | length }}"
+      - "Number of Hosts to Remove: {{ hosts_input | length }}"
+      - "Number of Desired State Hosts: {{ remaining_host_count }}"
+  when: minimum_cluster_hosts | default(0) | int > 0
+
+- name: Safety Check
+  ansible.builtin.fail:
+    msg: >-
+      Removing {{ hosts_input | length }} host(s) would leave {{ remaining_host_count }} host(s),
+      which is below the minimum of {{ minimum_cluster_hosts }}.
+      Set force_host_removal=true to override this safety check.
+  when:
+    - minimum_cluster_hosts | default(0) | int > 0
+    - remaining_host_count | int < minimum_cluster_hosts | int
+    - not force_host_removal | default(false) | bool
+
+- name: Warn About Force Removal Override
+  ansible.builtin.debug:
+    msg: "WARNING: force_host_removal is enabled. Bypassing minimum host count safety check."
+  when:
+    - minimum_cluster_hosts | default(0) | int > 0
+    - remaining_host_count | int < minimum_cluster_hosts | int
+    - force_host_removal | default(false) | bool
+
+- name: Set Hosts Ready to Remove
+  ansible.builtin.set_fact:
+    hosts_ready_to_remove: "{{ hosts_input }}"
+
+- name: Initialize Host IDs Dictionary
+  ansible.builtin.set_fact:
+    hosts_to_remove_ids: {}
+
+- name: Build Host IDs for Removal
+  ansible.builtin.set_fact:
+    hosts_to_remove_ids: "{{ hosts_to_remove_ids | default({}) | combine({item.fqdn: {'id': item.id}}) }}"
+  loop: "{{ current_cluster_hosts_with_fqdns | selectattr('fqdn', 'in', hosts_ready_to_remove) | list }}"
+  loop_control:
+    label: "{{ item.fqdn | default('unknown') }}"
+
+- name: Fail if No Hosts Available to Remove
+  ansible.builtin.fail:
+    msg: "No hosts are available to remove from the cluster."
+  when: hosts_ready_to_remove | length == 0

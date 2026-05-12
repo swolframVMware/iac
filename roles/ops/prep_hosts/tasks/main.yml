@@ -1,0 +1,60 @@
+---
+# Copyright (c) Broadcom. All Rights Reserved.
+# The term "Broadcom" refers solely to the Broadcom Inc. corporate affiliate that
+# distributes this software.
+#
+# You are hereby granted a non-exclusive, worldwide, royalty-free license under
+# Broadcom's copyrights to use, copy, modify, and distribute this software in source
+# code or binary form for use in connection with Broadcom products.
+#
+# This copyright notice shall be included in all copies or substantial portions of the
+# software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+# PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+# CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+# OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+# ----------------------------------------------------------------------------------- #
+# Role: ops.prep_hosts
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This role is responsible for commissioning ESX hosts for a VMware Cloud Foundation
+#   instance.
+# ----------------------------------------------------------------------------------- #
+
+- name: Run ESX Host Prechecks
+  ansible.builtin.include_role:
+    name: broadcom.vcf.precheck.esx_precheck
+  vars:
+    hosts_input: "{{ (esx_hosts | default([])) }}"
+  when: (esx_hosts | default([])) | length > 0
+
+- name: Get Network Pool
+  ansible.builtin.include_role:
+    name: broadcom.vcf.sddc_manager.network_pool_info
+
+- name: Get Clusters to Process
+  ansible.builtin.set_fact:
+    clusters_to_process: >-
+      {{
+        [all_iac_vars.vsphere.datacenter.clusters | selectattr('name', 'equalto', cluster_input) | first]
+        if cluster_input is defined
+        else all_iac_vars.vsphere.datacenter.clusters
+      }}
+
+- name: Commission Cluster Hosts
+  ansible.builtin.include_tasks: commission_cluster_hosts.yml
+  loop: "{{ clusters_to_process }}"
+  loop_control:
+    loop_var: current_cluster
+  no_log: true
+
+- name: Get ESX Host IDs
+  ansible.builtin.include_role:
+    name: broadcom.vcf.sddc_manager.host_info
+  vars:
+    host_status_filter: UNASSIGNED_USEABLE
+    host_info_format: id
+  when: (esx_hosts | default([])) | length > 0

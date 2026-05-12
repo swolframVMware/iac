@@ -1,0 +1,105 @@
+---
+# Copyright (c) Broadcom. All Rights Reserved.
+# The term "Broadcom" refers solely to the Broadcom Inc. corporate affiliate that
+# distributes this software.
+#
+# You are hereby granted a non-exclusive, worldwide, royalty-free license under
+# Broadcom's copyrights to use, copy, modify, and distribute this software in source
+# code or binary form for use in connection with Broadcom products.
+#
+# This copyright notice shall be included in all copies or substantial portions of the
+# software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+# PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+# CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+# OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+# ----------------------------------------------------------------------------------- #
+# Role: vcf_installer.appliance
+# Task: Add a VCF Installer Appliance
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This task deploys the VCF Installer Appliance to an environment.
+# ----------------------------------------------------------------------------------- #
+
+- name: Build vApp Properties from Configuration
+  ansible.builtin.set_fact:
+    vcf_installer_properties:
+      vami.hostname: "{{ all_iac_vars.vcf_installer.hostname }}"
+      vami.ip0.SDDC-Manager: "{{ all_iac_vars.vcf_installer.ip_address }}"
+      vami.netmask0.SDDC-Manager: "{{ all_iac_vars.vcf_installer.netmask }}"
+      vami.gateway.SDDC-Manager: "{{ all_iac_vars.vcf_installer.gateway }}"
+      vami.DNS.SDDC-Manager: "{{ (all_iac_vars.vcf_installer.dns_servers | default(all_iac_vars.dns.servers)) | join(',') }}"
+      vami.domain.SDDC-Manager: "{{ all_iac_vars.vcf_installer.dns_domain | default(all_iac_vars.dns.domain_name) }}"
+      vami.searchpath.SDDC-Manager: "{{ (all_iac_vars.vcf_installer.dns_search | default([all_iac_vars.dns.domain_name])) | join(',') }}"
+      guestinfo.ntp: "{{ (all_iac_vars.vcf_installer.ntp_servers | default(all_iac_vars.ntp)) | join(',') }}"
+      ROOT_PASSWORD: "{{ vcf_installer_root_password }}"
+      LOCAL_USER_PASSWORD: "{{ vcf_installer_local_password }}"
+
+- name: Add VCF Installer Appliance
+  broadcom.vcf.vcf_installer_appliance:
+    ovf: "{{ all_iac_vars.vcf_installer.deployment.ova_path | default(omit) }}"
+    url: "{{ all_iac_vars.vcf_installer.deployment.ova_url | default(omit) }}"
+    url_username: "{{ all_iac_vars.vcf_installer.deployment.ova_url_username | default(omit) }}"
+    url_password: "{{ vcf_installer_ovf_url_password | all_iac_vars.vcf_installer.deployment.ova_url_password | default(omit) }}"
+    hostname: "{{ all_iac_vars.vcf_installer.deployment.hostname }}"
+    username: "{{ all_iac_vars.vcf_installer.deployment.username }}"
+    password: "{{ vcf_installer_vsphere_password | default(all_iac_vars.vcf_installer.deployment.password) }}"
+    port: "{{ all_iac_vars.vcf_installer.deployment.port | default(443) }}"
+    validate_certs: "{{ all_iac_vars.vcf_installer.deployment.validate_certs | default(false) }}"
+    name: "{{ all_iac_vars.vcf_installer.vm_name }}"
+    datacenter: "{{ all_iac_vars.vcf_installer.deployment.datacenter | default(omit) }}"
+    cluster: "{{ all_iac_vars.vcf_installer.deployment.cluster | default(omit) }}"
+    esx_hostname: "{{ all_iac_vars.vcf_installer.deployment.esx_hostname | default(omit) }}"
+    datastore: "{{ all_iac_vars.vcf_installer.deployment.datastore }}"
+    folder: "{{ all_iac_vars.vcf_installer.deployment.folder | default(omit) }}"
+    resource_pool: "{{ all_iac_vars.vcf_installer.deployment.resource_pool | default(omit) }}"
+    networks: "{{ all_iac_vars.vcf_installer.deployment.networks }}"
+    disk_provisioning: "{{ all_iac_vars.vcf_installer.deployment.disk_provisioning | default('thin') }}"
+    power_on: "{{ all_iac_vars.vcf_installer.deployment.power_on | default(true) }}"
+    wait_for_ip_address: "{{ all_iac_vars.vcf_installer.deployment.wait_for_ip | default(true) }}"
+    allow_duplicates: "{{ all_iac_vars.vcf_installer.deployment.allow_duplicates | default(false) }}"
+    properties: "{{ vcf_installer_properties }}"
+    state: present
+  register: appliance_add_result
+  delegate_to: localhost
+
+- name: Display VCF Installer Appliance Add Result
+  ansible.builtin.debug:
+    msg: "{{ appliance_add_result.msg }}"
+  when:
+    - appliance_add_result is defined
+
+- name: Wait for VCF Installer API to be Available
+  broadcom.vcf.vcf_installer_info:
+    vcf_installer_hostname: "{{ all_iac_vars.vcf_installer.ip_address }}"
+    vcf_installer_user: "{{ all_iac_vars.vcf_installer.username | default('admin@local') }}"
+    vcf_installer_password: "{{ vcf_installer_local_password | default(all_iac_vars.vcf_installer.password) }}"
+  register: installer_info
+  until: installer_info.available
+  retries: "{{ all_iac_vars.vcf_installer.validation_retries | default(60) }}"
+  delay: "{{ all_iac_vars.vcf_installer.validation_delay | default(30) }}"
+  when:
+    - appliance_add_result.changed
+    - all_iac_vars.vcf_installer.validate_deployment | default(true) | bool
+    - not ansible_check_mode
+  delegate_to: localhost
+
+- name: Display VCF Installer API Status
+  ansible.builtin.debug:
+    msg:
+      - "VCF Installer API Status:"
+      - "  Hostname: {{ all_iac_vars.vcf_installer.hostname }}"
+      - "  IP Address: {{ all_iac_vars.vcf_installer.ip_address }}"
+      - "  Version: {{ installer_info.version | default('Unknown') }}"
+      - "  Message: {{ installer_info.msg }}"
+  when:
+    - appliance_add_result.changed
+    - all_iac_vars.vcf_installer.validate_deployment | default(true) | bool
+    - installer_info is defined
+    - installer_info is not skipped
+    - installer_info.available is defined
+    - installer_info.available
+

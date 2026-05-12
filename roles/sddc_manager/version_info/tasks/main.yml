@@ -1,0 +1,117 @@
+---
+# Copyright (c) Broadcom. All Rights Reserved.
+# The term "Broadcom" refers solely to the Broadcom Inc. corporate affiliate that
+# distributes this software.
+#
+# You are hereby granted a non-exclusive, worldwide, royalty-free license under
+# Broadcom's copyrights to use, copy, modify, and distribute this software in source
+# code or binary form for use in connection with Broadcom products.
+#
+# This copyright notice shall be included in all copies or substantial portions of the
+# software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+# PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+# CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+# OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+# ----------------------------------------------------------------------------------- #
+# Role: sddc_manager.version_info
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This role is responsible for retrieving information about the current versions of
+#   components for a workload domain in a VMware Cloud Foundation instance.
+# ----------------------------------------------------------------------------------- #
+
+- name: Get Workload Domain Information
+  ansible.builtin.include_role:
+    name: broadcom.vcf.sddc_manager.workload_domain_info
+
+- name: Get SDDC Information
+  broadcom.vcf.sddc_manager_sddc_info:
+    sddc_manager_hostname: "{{ all_iac_vars.sddc_manager.hostname }}"
+    sddc_manager_user: "{{ all_iac_vars.vsphere.vcenter.sso.username }}"
+    sddc_manager_password: "{{ vcenter_administrator_password | default(all_iac_vars.vsphere.vcenter.sso.administrator.password) }}"
+  register: sddc_info
+
+- broadcom.vcf.redact_debug:
+    var: sddc_info
+
+- name: Set SDDC Version
+  ansible.builtin.set_fact:
+    sddc_version: "{{ sddc_info['meta']['elements'][0].version }}"
+
+- broadcom.vcf.redact_debug:
+    var: sddc_version
+
+- name: Get vCenter Information
+  broadcom.vcf.sddc_manager_vcenter_info:
+    sddc_manager_hostname: "{{ all_iac_vars.sddc_manager.hostname }}"
+    sddc_manager_user: "{{ all_iac_vars.vsphere.vcenter.sso.username }}"
+    sddc_manager_password: "{{ vcenter_administrator_password | default(all_iac_vars.vsphere.vcenter.sso.administrator.password) }}"
+  register: vcenter_info
+
+- broadcom.vcf.redact_debug:
+    var: vcenter_info
+
+- name: Get vCenter Version Information
+  ansible.builtin.set_fact:
+    vcenter_version: "{{ vcenter_info['meta']['elements'] | json_query(jq) }}"
+  vars:
+    jq: "[?domain.id=='{{ domain_id }}'].version"
+
+- broadcom.vcf.redact_debug:
+    var: vcenter_version
+
+- name: Get ESX Host Information
+  broadcom.vcf.sddc_manager_host_info:
+    sddc_manager_hostname: "{{ all_iac_vars.sddc_manager.hostname }}"
+    sddc_manager_user: "{{ all_iac_vars.vsphere.vcenter.sso.username }}"
+    sddc_manager_password: "{{ vcenter_administrator_password | default(all_iac_vars.vsphere.vcenter.sso.administrator.password) }}"
+    host_status: ASSIGNED
+  register: host_info
+
+- broadcom.vcf.redact_debug:
+    var: host_info
+
+- name: Get ESX Host Version Information
+  ansible.builtin.set_fact:
+    host_version: "{{ host_info['meta'].values() | list | json_query(jq) | unique }}"
+  vars:
+    jq: "[?domain.id=='{{ domain_id }}'].esxiVersion"
+
+- broadcom.vcf.redact_debug:
+    var: host_version
+
+- name: Get NSX Manager Information
+  broadcom.vcf.sddc_manager_nsx_info:
+    sddc_manager_hostname: "{{ all_iac_vars.sddc_manager.hostname }}"
+    sddc_manager_user: "{{ all_iac_vars.vsphere.vcenter.sso.username }}"
+    sddc_manager_password: "{{ vcenter_administrator_password | default(all_iac_vars.vsphere.vcenter.sso.administrator.password) }}"
+  register: nsx_info
+
+- broadcom.vcf.redact_debug:
+    var: nsx_info
+
+- name: Get NSX Manager Version Information
+  ansible.builtin.set_fact:
+    nsx_version: "{{ nsx_info['meta']['elements'] | json_query(jq) }}"
+  vars:
+    jq: "[?domains[?id=='{{ domain_id }}']].version"
+
+- broadcom.vcf.redact_debug:
+    var: nsx_version
+
+- ansible.builtin.set_fact:
+    current_component_versions:
+      sddc_manager: "{{ sddc_version }}"
+      vcenter: "{{ vcenter_version[0] }}"
+      nsx: "{{ nsx_version[0] }}"
+      host: "{{ host_version }}"
+      domain_info: "{{ domain_info }}"
+      sddc_info: "{{ sddc_info }}"
+      nsx_info: "{{ nsx_info }}"
+
+- broadcom.vcf.redact_debug:
+    var: current_component_versions

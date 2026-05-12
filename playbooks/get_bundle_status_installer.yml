@@ -1,0 +1,163 @@
+---
+# Copyright (c) Broadcom. All Rights Reserved.
+# The term "Broadcom" refers solely to the Broadcom Inc. corporate affiliate that
+# distributes this software.
+#
+# You are hereby granted a non-exclusive, worldwide, royalty-free license under
+# Broadcom's copyrights to use, copy, modify, and distribute this software in source
+# code or binary form for use in connection with Broadcom products.
+#
+# This copyright notice shall be included in all copies or substantial portions of the
+# software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+# PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+# CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+# OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+# ----------------------------------------------------------------------------------- #
+# Playbook: Get Installation Bundles Status from VCF Installer
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This playbook retrieves the installation bundle status from a VCF Installer
+#   instance for the releases and/or components.
+#
+# Variables:
+#   All variables can be provided using command-line inputs or a vars file:
+#
+#   Required for IaC Configuration Loading:
+#   - region     : Region identifier (e.g., 'amer', 'emea', 'apac')
+#   - datacenter : Datacenter identifier (e.g., 'dc01', 'dc02')
+#   - az         : Availability zone identifier (e.g., 'az01', 'az02')
+#   - vcf        : VCF instance identifier (e.g., 'lab', 'prod')
+#   - domain     : VCF domain identifier (e.g., 'm01', 'w01')
+#
+# Usage Examples:
+#   ansible-playbook playbooks/get_bundle_status_installer.yml \
+#     -e @examples/lab/vars/mgmt_automation_settings.yml
+#
+#   ansible-playbook playbooks/get_bundle_status_installer.yml \
+#     -e "region=amer datacenter=dc01 az=az01 vcf=lab domain=m01"
+#
+# ----------------------------------------------------------------------------------- #
+
+- name: Get Bundle Status from VCF Installer
+  hosts: localhost
+  gather_facts: true
+  environment:
+    no_proxy: "*"
+
+  vars:
+    _component_api_map:
+      avi-lb: NSX_ALB
+      cloud-proxy: VCF_OPS_CLOUD_PROXY
+      fleet-lcm: VCF_FLEET_LCM
+      identity-broker: VIDB
+      license-server: VCF_LICENSE_SERVER
+      migration-services-engine: VCF_SERVICE_VCD_MIGRATION_BACKEND
+      nsx: NSX_T_MANAGER
+      salt-master: VCF_SALT
+      salt-raas: VCF_SALT_RAAS
+      sddc-lcm: VCF_SDDC_LCM
+      sddc-manager: SDDC_MANAGER
+      software-depot: DEPOT_SERVICE
+      telemetry: TELEMETRY_ACCEPTOR
+      vcenter: VCENTER
+      vcf-automation: VRA
+      vcf-operations: VROPS
+      vcf-operations-fleet: VRSLCM
+      vcf-operations-hcx: HCX
+      vcf-service-runtime: VSP
+
+    _component_name_map:
+      DEPOT_SERVICE: Software Depot
+      HCX: VCF Operations HCX
+      NSX_ALB: Avi Load Balancer
+      NSX_T_MANAGER: NSX
+      SDDC_MANAGER: SDDC Manager
+      TELEMETRY_ACCEPTOR: Telemetry
+      VCENTER: vCenter
+      VCF_FLEET_LCM: Fleet Lifecycle
+      VCF_LICENSE_SERVER: License Server
+      VCF_OPS_CLOUD_PROXY: Cloud Proxy
+      VCF_SALT: Salt Master
+      VCF_SALT_RAAS: Salt RaaS
+      VCF_SDDC_LCM: SDDC Lifecycle
+      VCF_SERVICE_VCD_MIGRATION_BACKEND: Migration Service Engine
+      VIDB: Identity Broker
+      VRA: VCF Automation
+      VROPS: VCF Operations
+      VRSLCM: VCF Operations Fleet Management
+      VSP: VCF Services Runtime
+
+  tasks:
+    - name: Get IaC Settings
+      ansible.builtin.include_role:
+        name: broadcom.vcf.iac.get_settings
+
+    - name: Validate Bundle Configuration
+      ansible.builtin.assert:
+        that:
+          - all_iac_vars.bundle is defined
+          - all_iac_vars.bundle.releases is defined
+          - all_iac_vars.bundle.releases | length > 0
+        fail_msg: "bundle.yml must define at least one release under bundle.releases"
+
+    - name: Get Bundle Status per Release
+      broadcom.vcf.vcf_installer_bundle_info:
+        vcf_installer_hostname: "{{ all_iac_vars.vcf_installer.hostname }}"
+        vcf_installer_user: "{{ all_iac_vars.vcf_installer.username | default('admin@local') }}"
+        vcf_installer_password: "{{ vcf_installer_password | default(all_iac_vars.vcf_installer.password) }}"
+        operation: download_status
+        release_version: "{{ item.release_version }}"
+      loop: "{{ all_iac_vars.bundle.releases }}"
+      loop_control:
+        label: "release={{ item.release_version }}"
+      register: release_status_results
+
+    - name: Initialize Bundle Status Elements
+      ansible.builtin.set_fact:
+        _release_filtered: []
+
+    - name: Set Filtered Elements per Release
+      ansible.builtin.set_fact:
+        _release_filtered: >-
+          {{ _release_filtered | default([]) +
+             ( ( item.download_status.elements | default([]) )
+               if (item.item.download_all | default(true)) | bool
+               else
+               ( item.download_status.elements | default([])
+                 | selectattr('componentType', 'in',
+                     item.item.components | default([])
+                     | map('extract', _component_api_map)
+                     | select('defined')
+                     | list)
+                 | list )
+             ) }}
+      loop: "{{ release_status_results.results }}"
+      loop_control:
+        label: "release={{ item.item.release_version }}"
+
+    - name: Build Bundle Status Summary
+      ansible.builtin.set_fact:
+        bundle_status_summary:
+          total: "{{ _release_filtered | length }}"
+          successful: "{{ (_release_filtered | selectattr('downloadStatus', 'equalto', 'SUCCESSFUL') | list | length) + (_release_filtered | selectattr('downloadStatus', 'equalto', 'SUCCESS') | list | length) }}"
+          in_progress: "{{ _release_filtered | selectattr('downloadStatus', 'equalto', 'IN_PROGRESS') | list | length }}"
+          scheduled: "{{ _release_filtered | selectattr('downloadStatus', 'equalto', 'SCHEDULED') | list | length }}"
+          validating: "{{ _release_filtered | selectattr('downloadStatus', 'equalto', 'VALIDATING') | list | length }}"
+          pending: "{{ _release_filtered | selectattr('downloadStatus', 'equalto', 'PENDING') | list | length }}"
+          failed: "{{ _release_filtered | selectattr('downloadStatus', 'equalto', 'FAILED') | list | length }}"
+          cancelled: "{{ _release_filtered | selectattr('downloadStatus', 'equalto', 'CANCELLED') | list | length }}"
+
+    - name: Display Bundle Status Details
+      ansible.builtin.debug:
+        msg: "{{ _component_name_map[item.componentType] | default(item.componentType | lower) }} {{ item.version | default('unknown') }}: status={{ item.downloadStatus | default('UNKNOWN') }}, bundle_id={{ item.bundleId | default('unknown') }}"
+      loop: "{{ _release_filtered }}"
+      loop_control:
+        label: "{{ _component_name_map[item.componentType] | default(item.componentType | lower) }} {{ item.version | default('unknown') }}"
+
+    - name: Display Status Summary
+      ansible.builtin.debug:
+        msg: "Bundles selected for status={{ bundle_status_summary.total }} downloaded={{ bundle_status_summary.successful }}, in progress={{ bundle_status_summary.in_progress }}, scheduled={{ bundle_status_summary.scheduled }}, validating={{ bundle_status_summary.validating }}, pending={{ bundle_status_summary.pending }}, failed={{ bundle_status_summary.failed }}, cancelled={{ bundle_status_summary.cancelled }}"

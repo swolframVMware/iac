@@ -1,0 +1,27 @@
+---
+# ----------------------------------------------------------------------------------- #
+# VCF Operations Configuration
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This file contains the instance-level configuration for the VMware Cloud
+#   Foundation instance.
+# ----------------------------------------------------------------------------------- #
+
+operations:
+  load_balancer_fqdn: flt-ops01.rainpole.io
+  admin_password: "{{ vault_operations_admin_password }}"
+  root_password: "{{ vault_operations_root_password }}"
+  nodes:
+    - hostname: flt-ops01a.rainpole.io
+      type: master
+    - hostname: flt-ops01b.rainpole.io
+      type: replica
+    - hostname: flt-ops01c.rainpole.io
+      type: data
+  fleet_management:
+    hostname: flt-fm01.rainpole.io
+    root_password: "{{ vault_fleet_management_root_password }}"
+    admin_password: "{{ vault_fleet_management_admin_password }}"
+  collector:
+    hostname: sfo-cp01.sfo.rainpole.io
+    root_password: "{{ vault_collector_root_password }}"

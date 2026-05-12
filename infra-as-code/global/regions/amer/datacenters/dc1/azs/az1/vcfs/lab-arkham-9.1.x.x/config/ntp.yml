@@ -1,0 +1,12 @@
+---
+# ----------------------------------------------------------------------------------- #
+# NTP Configuration
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This file contains the instance-level configuration for the VMware Cloud
+#   Foundation instance.
+# ----------------------------------------------------------------------------------- #
+
+ntp:
+  - ntp0.sfo.rainpole.io
+  - ntp1.sfo.rainpole.io

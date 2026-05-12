@@ -1,0 +1,193 @@
+skipEsxThumbprintValidation: {{ vsphere.skip_esx_thumbprint_validation | default(true) }}
+skipGatewayPingValidation: {{ instance.skip_gateway_ping_validation | default(false) }}
+sddcId: {{ domain if domain is not mapping else domain.name }}
+vcfInstanceName: {{ instance.name }}
+workflowType: VCF
+version: {{ instance.version }}
+ceipEnabled: {{ instance.enable_ceip | default(false) }}
+managementPoolName: {{ vsphere.datacenter.clusters[0].host_pool.name }}
+dnsSpec:
+  subdomain: {{ dns.domain_name }}
+  nameservers: {{ dns.servers }}
+ntpServers: {{ ntp }}
+vcenterSpec:
+  vcenterHostname: {{ vsphere.vcenter.hostname }}
+  vmSize: {{ vsphere.vcenter.deployment_size | default(instance.size | default('medium')) }}
+  storageSize: {{ vsphere.vcenter.storage_size | default('xlstorage' if instance.size | default('medium') == 'large' else 'lstorage') }}
+  rootVcenterPassword: {{ vcenter_root_password | default(vsphere.vcenter.root_password) }}
+  adminUserSsoPassword: {{ vcenter_administrator_password | default(vsphere.vcenter.sso.password) }}
+  ssoDomain: {{ vsphere.vcenter.sso.domain | default('vsphere.local') }}
+  useExistingDeployment: {{ vsphere.vcenter.use_existing_deployment }}
+clusterSpec:
+  clusterName: {{ vsphere.datacenter.clusters[0].name }}
+  datacenterName: {{ vsphere.datacenter.name }}
+datastoreSpec:
+  vsanSpec:
+    esaConfig:
+      enabled: {{ vsphere.datacenter.clusters[0].storage.vsan.enable_vsan_esa }}
+    datastoreName: {{ vsphere.datacenter.clusters[0].storage.vsan.datastore_name }}
+{% if vsphere.datacenter.clusters[0].storage.vsan.vsan_type == 'osa' %}
+    failuresToTolerate: {{ vsphere.datacenter.clusters[0].storage.vsan.failures_to_tolerate | default(1) }}
+{% endif %}
+nsxtSpec:
+  skipNsxOverlayOverManagementNetwork: true
+  nsxtManagerSize: {{ nsx.deployment.size | default(instance.size | default('medium')) }}
+  nsxtManagers:
+{% for node in nsx.deployment.nodes %}
+    - hostname: {{ node.hostname }}
+{% endfor %}
+  rootNsxtManagerPassword: {{ nsx_root_password | default(nsx.deployment.root_password) }}
+  nsxtAdminPassword: {{ nsx_admin_password | default(nsx.deployment.admin_password) }}
+  nsxtAuditPassword: {{ nsx_audit_password | default(nsx.deployment.audit_password) }}
+  vipFqdn: {{ nsx.deployment.vip.hostname | default('') }}
+  useExistingDeployment: {{ nsx.deployment.use_existing_deployment }}
+  transportVlanId: {{ nsx.transport_zone.overlay.port_groups[0].vlan }}
+  ipAddressPoolSpec:
+    name: {{ nsx.transport_zone.overlay.port_groups[0].name }}
+    description: {{ nsx.transport_zone.overlay.port_groups[0].description }}
+    subnets:
+      - ipAddressPoolRanges:
+          - start: {{ nsx.transport_zone.overlay.port_groups[0].inclusion_range[0].start_ip_address }}
+            end: {{ nsx.transport_zone.overlay.port_groups[0].inclusion_range[0].end_ip_address }}
+        cidr: {{ nsx.transport_zone.overlay.port_groups[0].subnet }}
+        gateway: {{ nsx.transport_zone.overlay.port_groups[0].gateway }}
+vcfOperationsSpec:
+  nodes:
+{% for node in operations.nodes %}
+    - hostname: {{ node.hostname}}
+      rootUserPassword: {{ operations_root_password | default(operations.root_password) }}
+      type: {{ node.type }}
+{% endfor %}
+  adminUserPassword: {{ operations_admin_password | default(operations.admin_password) }}
+  applianceSize: {{ operations.appliance_size | default(instance.size | default('medium')) }}
+  useExistingDeployment: {{ operations.use_existing_deployment }}
+  loadBalancerFqdn: {{ operations.load_balancer_fqdn }}
+{% if instance.version is version('9.1.0.0', '<') %}
+vcfOperationsFleetManagementSpec:
+  hostname: {{ operations.fleet_management.hostname }}
+  rootUserPassword: {{ fleet_management_root_password | default(operations.fleet_management.root_password) }}
+  adminUserPassword: {{ fleet_management_admin_password | default(operations.fleet_management.admin_password) }}
+  useExistingDeployment: {{ operations.fleet_management.use_existing_deployment }}
+{% endif %}
+vcfOperationsCollectorSpec:
+  hostname: {{ operations.collector.hostname }}
+  applianceSize: {{ operations.collector.appliance_size | default('standard') }}
+  applicationSize: {{ operations.collector.application_size | default('small') }}
+  rootUserPassword: {{ collector_root_password | default(operations.collector.root_password) }}
+  useExistingDeployment: {{ operations.collector.use_existing_deployment }}
+{% if instance.version is version('9.1.0.0', '>=') %}
+vspClusterSpec:
+  platformFqdn: {{ management.services_runtime_hostname }}
+  instanceFqdn: {{ management.instance_hostname }}
+  fleetFqdn: {{ management.fleet_hostname }}
+  systemUserPassword: {{ management_password | default(management.password) }}
+  size: {{ management.size | default(instance.size | default('medium')) }}
+  internalClusterCidrIpv4: {{ management.internal_cluster_cidr }}
+  ipv4Pool:
+    ipRange:
+      startIpAddress: {{ management.node_ips.start_ip_address }}
+      endIpAddress: {{ management.node_ips.end_ip_address }}
+  useExistingDeployment: {{ management.use_existing_deployment }}
+vidbSpec:
+  hostname: {{ identity_broker.hostname }}
+licenseServerSpec:
+  hostname: {{ license.hostname }}
+  useExistingDeployment: {{ license.use_existing_deployment }}
+sddcLcmSpec:
+  hostname: {{ lcm.sddc.hostname }}
+fleetLcmSpec:
+  hostname: {{ lcm.fleet.hostname }}
+{% endif %}
+{% if automation.enable_vcf_automation %}
+vcfAutomationSpec:
+  hostname: {{ automation.hostname }}
+{% if instance.version is version('9.1.0.0', '>=') %}
+  platformFqdn: {{ automation.services_runtime_hostname }}
+  size: {{ automation.size | default(instance.size | default('medium')) }}
+{% endif %}
+  adminUserPassword: {{ automation_admin_password | default(automation.admin_password) }}
+  ipPool: {{ automation.node_ips }}
+  nodePrefix: {{ automation.node_prefix }}
+  internalClusterCidr: {{ automation.internal_cluster_cidr }}
+  useExistingDeployment: {{ automation.use_existing_deployment }}
+{% endif %}
+{% if instance.enable_custom_certificates | default(false) %}
+securitySpec:
+  esxiCertsMode: Custom
+  rootCaCerts:
+{% for cert in instance.custom_certificates.root_ca_certs %}
+    - alias: {{ cert.alias }}
+      certChain:
+{% for chain in cert.cert_chain %}
+        - |
+          {{ chain | indent(10) | trim }}
+{% endfor %}
+{% endfor %}
+{% endif %}
+hostSpecs:
+{% for host in vsphere.datacenter.clusters[0].esx_hosts %}
+  - hostname: {{ host.hostname }}
+    credentials:
+      username: root
+      password: {{ esx_host_password | default(vsphere.esx_root_password) }}
+{% endfor %}
+networkSpecs:
+{% for key, pg in vsphere.datacenter.clusters[0].mgmt_port_groups.items() %}
+  - networkType: {{ key }}
+    subnet: {{ pg.subnet }}
+    gateway: {{ pg.gateway }}
+    subnetMask: {{ pg.subnetMask }}
+    vlanId: {{ pg.vlan }}
+    mtu: {{ pg.mtu }}
+    portGroupKey: {{ pg.name }}
+    teamingPolicy: {{ pg.teaming_policy }}
+{% if 'inclusion_range' in pg %}
+    includeIpAddressRanges:
+      - startIpAddress: {{ pg.inclusion_range[0].start_ip_address }}
+        endIpAddress: {{ pg.inclusion_range[0].end_ip_address }}
+{% endif %}
+    activeUplinks: {{ pg.active_uplinks }}
+    standbyUplinks: {{ pg.standby_uplinks }}
+{% endfor %}
+dvsSpecs:
+{% for dvs in vsphere.networking.distributed_switches %}
+  - dvsName: {{ vsphere.datacenter.clusters[0].name }}-{{ dvs.name }}
+    vmnics:
+{% for uplink in dvs.uplinks %}
+      - {{ uplink.vmnic }}
+{% endfor %}
+    mtu: {{ dvs.mtu }}
+{% if dvs.name == nsx.transport_zone.overlay.port_groups[0].vds_name %}
+    nsxtSwitchConfig:
+      transportZones:
+        - name: {{ nsx.transport_zone.overlay.name }}
+          transportType: OVERLAY
+    nsxTeamings:
+      - policy: {{ dvs.teaming.policy }}
+        activeUplinks: {{ dvs.active_uplinks }}
+        standByUplinks: {{ dvs.standby_uplinks }}
+{% else %}
+    nsxtSwitchConfig: null
+    nsxTeamings: null
+{% endif %}
+    networks:
+{% for key, value in vsphere.datacenter.clusters[0].mgmt_port_groups.items() %}
+{% if value.vds_name == dvs.name %}
+      - {{ key }}
+{% endif %}
+{% endfor %}
+    niocSpecs: null
+    isUsedByNsxt: null
+    lagSpecs: null
+    vmnicsToUplinks:
+{% for uplink in dvs.uplinks %}
+      - id: {{ uplink.vmnic }}
+        uplink: {{ uplink.id }}
+{% endfor %}
+{% endfor %}
+sddcManagerSpec:
+  sshPassword: {{ sddc_manager_vcf_password | default(sddc_manager.vcf_password) }}
+  hostname: {{ sddc_manager.hostname }}
+  rootPassword: {{ sddc_manager_root_password | default(sddc_manager.root_password) }}
+  localUserPassword: {{ sddc_manager_admin_password | default(sddc_manager.admin_password) }}
+  useExistingDeployment: {{ sddc_manager.use_existing_deployment }}

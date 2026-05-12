@@ -1,0 +1,14 @@
+---
+# ----------------------------------------------------------------------------------- #
+# Default ESX Precheck Configuration
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This file contains the default precheck settings for ESX host used in a
+#   VMware Cloud Foundation deployment.
+# ----------------------------------------------------------------------------------- #
+
+precheck:
+  esx_service_name_ssh: TSM-SSH
+  esx_service_name_ntp: ntpd
+  esx_service_state: start
+  validate_certs: false

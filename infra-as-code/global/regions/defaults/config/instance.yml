@@ -1,0 +1,18 @@
+---
+# ----------------------------------------------------------------------------------- #
+# Default Instance Configuration
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This file contains the default configuration settings for the instance in a
+#   VMware Cloud Foundation deployment.
+#
+# Options:
+#   instance.size: large, medium, small (Default: medium)
+#   Note: The instance size can be overridden in the by passing the size to the
+#         respective components.
+# ----------------------------------------------------------------------------------- #
+
+instance:
+  size: medium
+  enable_ceip: false
+  skip_gateway_ping_validation: false

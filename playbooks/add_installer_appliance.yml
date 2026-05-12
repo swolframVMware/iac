@@ -1,0 +1,69 @@
+---
+# Copyright (c) Broadcom. All Rights Reserved.
+# The term "Broadcom" refers solely to the Broadcom Inc. corporate affiliate that
+# distributes this software.
+#
+# You are hereby granted a non-exclusive, worldwide, royalty-free license under
+# Broadcom's copyrights to use, copy, modify, and distribute this software in source
+# code or binary form for use in connection with Broadcom products.
+#
+# This copyright notice shall be included in all copies or substantial portions of the
+# software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+# PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+# CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+# OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+# ----------------------------------------------------------------------------------- #
+# Playbook: Add a VCF Installer Appliance
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This playbook adds the VCF Installer appliance to a vSphere environment.
+#   It uses the IaC directory structure to load configuration and credentials.
+#
+# Prerequisites:
+#   - IaC configuration files must be populated with deployment settings
+#   - VCF Installer OVA file must be accessible at the configured path
+#   - vCenter or ESXi credentials must be valid and have sufficient permissions
+#
+# Variables:
+#   Required for IaC Configuration Loading:
+#   - region     : Region identifier (e.g., 'amer', 'emea', 'apac')
+#   - datacenter : Datacenter identifier (e.g., 'dc1', 'dc2')
+#   - az         : Availability zone identifier (e.g., 'az1', 'az2')
+#   - vcf        : VCF instance identifier (e.g., 'lab-arkham', 'lab-gcp')
+#
+# Usage Examples:
+#   # Using a vars file (recommended for passwords):
+#   ansible-playbook playbooks/add_installer_appliance.yml \
+#     -e @examples/lab-arkham/vars/installer_automation_settings.yml \
+#     --ask-vault-pass
+#
+#   # Using inline variables:
+#   ansible-playbook playbooks/add_installer_appliance.yml \
+#     -e "region=amer datacenter=dc1 az=az1 vcf=lab-arkham"
+#
+#   # Check mode (dry-run):
+#   ansible-playbook playbooks/add_installer_appliance.yml \
+#     -e @examples/lab-arkham/vars/installer_automation_settings.yml \
+#     --check
+# ----------------------------------------------------------------------------------- #
+
+- name: Add VCF Installer Appliance
+  hosts: localhost
+  gather_facts: true
+  environment:
+    no_proxy: "*"
+
+  tasks:
+    - name: Get IaC Settings
+      ansible.builtin.include_role:
+        name: broadcom.vcf.iac.get_settings
+
+    - name: Add VCF Installer Appliance
+      ansible.builtin.include_role:
+        name: broadcom.vcf.vcf_installer.appliance
+      vars:
+        appliance_state: present

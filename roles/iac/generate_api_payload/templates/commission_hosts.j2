@@ -1,0 +1,15 @@
+HostCommissionSpec:
+{% for cluster in vsphere.datacenter.clusters %}
+{% if not cluster_input | default(None) or cluster.name == cluster_input %}
+{% set hosts_to_process = commission_hosts_subset | default(hosts_input | default([])) %}
+{% for host in cluster.esx_hosts %}
+{% if not hosts_to_process or host.hostname in hosts_to_process %}
+  - fqdn: {{ host.hostname }}
+    username: root
+    password: {{ esx_host_password | default(vsphere.esx_root_password) }}
+    storageType: {{ storage_type }}
+    networkPoolId: {{ network_pool_id }}
+{% endif %}
+{% endfor %}
+{% endif %}
+{% endfor %}

@@ -1,0 +1,56 @@
+---
+# Copyright (c) Broadcom. All Rights Reserved.
+# The term "Broadcom" refers solely to the Broadcom Inc. corporate affiliate that
+# distributes this software.
+#
+# You are hereby granted a non-exclusive, worldwide, royalty-free license under
+# Broadcom's copyrights to use, copy, modify, and distribute this software in source
+# code or binary form for use in connection with Broadcom products.
+#
+# This copyright notice shall be included in all copies or substantial portions of the
+# software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+# PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+# CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+# OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+# ----------------------------------------------------------------------------------- #
+# Role: sddc_manager.backup
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This role is responsible for managing the backup configuration in a VMware Cloud
+#   Foundation instance.
+# ----------------------------------------------------------------------------------- #
+
+- name: Fail if Backup Not Found in IaC
+  ansible.builtin.fail:
+    msg: "Backup settings not found in IaC variables. Please provide the necessary configuration to proceed."
+  when: all_iac_vars.backup is none
+
+- name: Set Backup Configuration
+  set_fact:
+    backup_iac_config: "{{ all_iac_vars.backup | to_json | regex_replace('\\s+', '')  | from_json | default(none) }}"
+
+- name: Retrieve SSH ECDSA Fingerprint
+  ansible.builtin.include_role:
+    name: broadcom.vcf.util.ssh_ecdsa_fingerprint
+  vars:
+    target_host: "{{ backup_iac_config.backupLocations[0].server }}"
+  when:
+    - backup_state | default('update') == 'update'
+    - backup_ssh_fingerprint is not defined or backup_ssh_fingerprint is none or backup_ssh_fingerprint | length == 0
+
+- name: Set SSH ECDSA Fingerprint
+  ansible.builtin.set_fact:
+    backup_ssh_fingerprint: "{{ ssh_ecdsa_fingerprint }}"
+  when:
+    - backup_state | default('update') == 'update'
+    - backup_ssh_fingerprint is not defined or backup_ssh_fingerprint is none or backup_ssh_fingerprint | length == 0
+
+- name: Validate Backup Configuration
+  ansible.builtin.include_tasks: validate_backup_config.yml
+
+- name: Update Backup Configuration
+  ansible.builtin.include_tasks: update_backup_config.yml

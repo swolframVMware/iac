@@ -1,0 +1,63 @@
+---
+# Copyright (c) Broadcom. All Rights Reserved.
+# The term "Broadcom" refers solely to the Broadcom Inc. corporate affiliate that
+# distributes this software.
+#
+# You are hereby granted a non-exclusive, worldwide, royalty-free license under
+# Broadcom's copyrights to use, copy, modify, and distribute this software in source
+# code or binary form for use in connection with Broadcom products.
+#
+# This copyright notice shall be included in all copies or substantial portions of the
+# software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+# PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+# CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+# OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+# ----------------------------------------------------------------------------------- #
+# Role: sddc_manager.host
+# Task: Generate Commission Hosts Payload
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This task is responsible for generating the payload to commission hosts in a
+#   VMware Cloud Foundation instance.
+# ----------------------------------------------------------------------------------- #
+
+- name: Get Network Pool
+  ansible.builtin.include_role:
+    name: broadcom.vcf.sddc_manager.network_pool_info
+
+- name: Get Cluster Storage Configuration
+  ansible.builtin.set_fact:
+    cluster_config: "{{ all_iac_vars.vsphere.datacenter.clusters | selectattr('name', 'equalto', cluster_input) | first }}"
+
+- name: Get Storage Type
+  ansible.builtin.set_fact:
+    storage_type: "{{ 'VSAN_ESA' if (cluster_config.storage.vsan.vsan_type | default('')) == 'esa' else 'VSAN' if cluster_config.storage.vsan is defined else 'NFS' if cluster_config.storage.nfs is defined else 'VMFS_FC' if cluster_config.storage.vmfs is defined else 'VVOL' if cluster_config.storage.vvol is defined else 'VSAN' }}"
+
+- name: Validate Host Exists in IaC Configuration
+  ansible.builtin.set_fact:
+    defined_hostnames: "{{ cluster_config.esx_hosts | map(attribute='hostname') | list }}"
+  when: hosts_input is defined and hosts_input | length > 0
+
+- name: Check for Undefined Host
+  ansible.builtin.set_fact:
+    undefined_hosts: "{{ hosts_input | difference(defined_hostnames) }}"
+  when: hosts_input is defined and hosts_input | length > 0
+
+- name: Fail if Host Not Found in IaC Configuration
+  ansible.builtin.fail:
+    msg: >-
+      The following hosts are not defined in the IaC configuration for cluster '{{ cluster_input }}':
+      {{ undefined_hosts | join(', ') }}.
+      Please add them to vsphere.datacenter.clusters[].esx_hosts in your IaC vars or correct the host_input list.
+  when:
+    - undefined_hosts | length > 0
+
+- name: Generate Commission Host Payload
+  ansible.builtin.include_role:
+    name: broadcom.vcf.iac.generate_api_payload
+  vars:
+    template_name: "{{ host_commission_template_name }}"

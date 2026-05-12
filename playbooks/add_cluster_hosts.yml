@@ -1,0 +1,54 @@
+---
+# Copyright (c) Broadcom. All Rights Reserved.
+# The term "Broadcom" refers solely to the Broadcom Inc. corporate affiliate that
+# distributes this software.
+#
+# You are hereby granted a non-exclusive, worldwide, royalty-free license under
+# Broadcom's copyrights to use, copy, modify, and distribute this software in source
+# code or binary form for use in connection with Broadcom products.
+#
+# This copyright notice shall be included in all copies or substantial portions of the
+# software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+# PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+# CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+# OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+# ----------------------------------------------------------------------------------- #
+# Playbook: Add Hosts to Cluster (Scale Out)
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This playbook adds ESX hosts to an existing cluster in a VMware Cloud Foundation
+#   instance.
+#
+# Variables:
+#   - cluster_input : Name of the cluster to add hosts to
+#   - hosts_input   : List of host FQDNs to add
+#
+# Usage:
+#   ansible-playbook playbooks/add_cluster_hosts.yml \
+#     -e @examples/lab/vars/wld_automation_settings.yml
+#
+#   ansible-playbook playbooks/add_cluster_hosts.yml \
+#     -e "cluster_input=cluster-01" \
+#     -e "hosts_input=['esx-04.example.com','esx-05.example.com']"
+# ----------------------------------------------------------------------------------- #
+
+- name: Add Hosts to Cluster
+  hosts: localhost
+  gather_facts: true
+  environment:
+    no_proxy: "*"
+
+  tasks:
+    - name: Get IaC Settings
+      ansible.builtin.include_role:
+        name: broadcom.vcf.iac.get_settings
+
+    - name: Add Hosts to Cluster
+      ansible.builtin.include_role:
+        name: broadcom.vcf.sddc_manager.cluster_hosts
+      vars:
+        cluster_hosts_state: present

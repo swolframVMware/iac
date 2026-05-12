@@ -1,0 +1,45 @@
+edgeClusterName: {{ nsx.edge_cluster.name }}
+edgeClusterType: {{ nsx.edge_cluster.type }}
+edgeRootPassword: {{ edge_root_password | default(nsx.edge_cluster.root_password) }}
+edgeAdminPassword: {{ edge_admin_password | default(nsx.edge_cluster.admin_password) }}
+edgeAuditPassword: {{ edge_audit_password | default(nsx.edge_cluster.audit_password) }}
+edgeFormFactor: {{ nsx.edge_cluster.form_factor }}
+tier0ServicesHighAvailability: {{ nsx.edge_cluster.tier_0_services_high_availability }}
+mtu: {{ nsx.edge_cluster.mtu }}
+tier0RoutingType: {{ nsx.edge_cluster.tier_0_routing_type }}
+asn: {{ nsx.edge_cluster.asn }}
+tier0Name: {{ nsx.edge_cluster.tier_0_name }}
+skipTepRoutabilityCheck: {{ nsx.edge_cluster.skip_tep_routability_check | default(false) }}
+edgeClusterProfileType: {{ nsx.edge_cluster.profile.type }}
+{% if nsx.edge_cluster.profile.type == 'CUSTOM' %}
+edgeClusterProfileSpec:
+  bfdAllowedHop: {{ nsx.edge_cluster.profile.bfd_allowed_hop }}
+  bfdDeclareDeadMultiple: {{ nsx.edge_cluster.profile.bfd_declare_dead_multiple }}
+  bfdProbeInterval: {{ nsx.edge_cluster.profile.bfd_probe_interval }}
+  edgeClusterProfileName: {{ nsx.edge_cluster.profile.name }}
+  standbyRelocationThreshold: {{ nsx.edge_cluster.profile.standby_relocation_threshold }}
+{% endif %}
+edgeNodeSpecs:
+{% for node in nsx.edge_cluster.edge_nodes %}
+  - edgeNodeName: {{ node.node_name }}
+    managementIP: {{ node.management_ip }}
+    managementGateway: {{ node.management_gateway }}
+    vmManagementPortgroupVlan: {{ node.vm_management_portgroup_vlan }}
+    vmManagementPortgroupName: {{ node.vm_management_portgroup_name }}
+    edgeTep1IP: {{ node.tep_1_ip }}
+    edgeTep2IP: {{ node.tep_2_ip }}
+    edgeTepGateway: {{ node.tep_gateway }}
+    edgeTepVlan: {{ node.tep_vlan }}
+    clusterId: {{ cluster_id }}
+    interRackCluster: {{ node.inter_rack_cluster }}
+    firstNsxVdsUplink: {{ node.first_nsx_vds_uplink }}
+    secondNsxVdsUplink: {{ node.second_nsx_vds_uplink }}
+    uplinkNetwork:
+{% for network in node.uplink_network %}
+      - uplinkVlan: {{ network.uplink_vlan }}
+        uplinkInterfaceIP: {{ network.uplink_interface_ip }}
+        peerIP: {{ network.peer_ip }}
+        asnPeer: {{ network.peer_asn }}
+        bgpPeerPassword: {{ bgp_peer_password | default(network.bgp_peers.password) }}
+{% endfor %}
+{% endfor %}

@@ -1,0 +1,10 @@
+---
+- name: Ensure SSH Service is started
+  ansible.builtin.include_tasks: present.yml
+  loop: "{{ nsx_managers }}"
+  when: ssh_service_state == 'present'
+  
+- name: Ensure SSH Service is stopped
+  ansible.builtin.include_tasks: absent.yml
+  loop: "{{ nsx_managers }}"
+  when: ssh_service_state | lower == 'absent'

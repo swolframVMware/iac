@@ -1,0 +1,3 @@
+---
+# Template name for instance payload.
+instance_template_name: "instance.j2"

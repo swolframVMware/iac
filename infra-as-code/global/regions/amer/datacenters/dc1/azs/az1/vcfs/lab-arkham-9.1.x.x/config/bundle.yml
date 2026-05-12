@@ -1,0 +1,72 @@
+---
+# ----------------------------------------------------------------------------------- #
+# Bundle Configuration
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This file contains the instance-level configuration for the VMware Cloud
+#   Foundation instance.
+#
+# Options:
+#   release_version: The release version to download bundles for (e.g., "9.1.0.0")
+#   download_all: true | false
+#     - true: Download all available installation bundles for the release version.
+#     - false: Download only specified installation bundles for the release version.
+#   components: List of product types to download (only used when download_all: false)
+#     Valid user-friendly names:
+#       - avi-lb                               # Avi Load Balancer
+#       - cloud-proxy                          # Cloud Proxy
+#       - fleet-lcm                            # Fleet Lifecycle
+#       - identity-broker                      # Identity Broker
+#       - license-server                       # License Server
+#       - migration-services-engine            # Migration Service Engine
+#       - nsx                                  # NSX
+#       - salt-master                          # Salt Master
+#       - salt-raas                            # Salt RaaS
+#       - sddc-lcm                             # SDDC Lifecycle
+#       - sddc-manager                         # SDDC Manager
+#       - software-depot                       # Software Depot
+#       - telemetry                            # Telemetry
+#       - vcenter                              # vCenter
+#       - vcf-automation                       # VCF Automation
+#       - vcf-operations                       # VCF Operations
+#       - vcf-operations-hcx                   # VCF Operations HCX
+#       - vcf-service-runtime                  # VCF Services Runtime
+#     Raw API type names are also accepted (e.g., VCENTER, NSX_T_MANAGER).
+#   download_options:
+#     wait_for_completion: true | false
+#       - true: Wait for each bundle download to complete before proceeding.
+#       - false: Initiate downloads asynchronously.
+#     timeout: Maximum time in seconds to wait for each bundle download (default: 3600).
+#     retry_count: Number of times to retry failed downloads (default: 3).
+#     retry_delay: Seconds to wait between retries (default: 60).
+#
+# ----------------------------------------------------------------------------------- #
+
+bundle:
+  releases:
+    - release_version: "9.1.0.0"
+      download_all: true
+      components:
+        - avi-lb
+        - cloud-proxy
+        - fleet-lcm
+        - identity-broker
+        - license-server
+        - migration-services-engine
+        - nsx
+        - salt-master
+        - salt-raas
+        - sddc-lcm
+        - sddc-manager
+        - software-depot
+        - telemetry
+        - vcenter
+        - vcf-automation
+        - vcf-operations
+        - vcf-operations-hcx
+        - vcf-service-runtime
+  download_options:
+    wait_for_completion: true
+    timeout: 7200
+    retry_count: 3
+    retry_delay: 60

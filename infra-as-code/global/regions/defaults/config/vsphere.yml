@@ -1,0 +1,27 @@
+---
+# ----------------------------------------------------------------------------------- #
+# Default vSphere Configuration
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This file contains the default configuration settings for vSpheree in a
+#   VMware Cloud Foundation deployment.
+#
+# Options:
+#   vsphere.vcenter.deployment_size: xlarge, large, medium, small, tiny (Default: medium)
+#     Note: This is an override of the size defined in at the instance-level.
+#   vsphere.vcenter.storage_size: xlstorage, lstorage (Default: lstorage)
+#     Note: This is an override of the size defined in at the instance-level.
+# ----------------------------------------------------------------------------------- #
+
+vsphere:
+  vcenter:
+    sso:
+      domain: vsphere.local
+      username: administrator@vsphere.local
+  skip_esx_thumbprint_validation: true
+  lcm:
+    image_name: Management-Domain-ESXi-Personality
+  networking:
+    standard_switch:
+      name: vSwitch0
+      mtu: 9000

@@ -1,0 +1,96 @@
+---
+# Copyright (c) Broadcom. All Rights Reserved.
+# The term "Broadcom" refers solely to the Broadcom Inc. corporate affiliate that
+# distributes this software.
+#
+# You are hereby granted a non-exclusive, worldwide, royalty-free license under
+# Broadcom's copyrights to use, copy, modify, and distribute this software in source
+# code or binary form for use in connection with Broadcom products.
+#
+# This copyright notice shall be included in all copies or substantial portions of the
+# software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+# PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+# CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+# OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+# ----------------------------------------------------------------------------------- #
+# Role: sddc_manager.certificate_authority
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This role is responsible for managing certificate authority configuration in a
+#   VMware Cloud Foundation instance. It can configure OpenSSL or Microsoft CA as
+#   the certificate authority.
+# ----------------------------------------------------------------------------------- #
+
+- name: Find Certificate Authority in IaC Configuration
+  ansible.builtin.set_fact:
+    certificate_authority_iac_config: "{{ all_iac_vars.certificate_authority | default(none) }}"
+
+- name: Validate Certificate Authority Type Configuration
+  ansible.builtin.fail:
+    msg: |
+      Invalid certificate authority type configuration.
+      
+      'type' must be one of: 'openssl' or 'microsoft'
+  when:
+    - certificate_authority_iac_config is not none
+    - certificate_authority_iac_config.type is defined
+    - certificate_authority_iac_config.type | lower not in ['openssl', 'microsoft']
+
+- name: Get Certificate Authority State and Type
+  ansible.builtin.set_fact:
+    certificate_authority_state: "{{ certificate_authority_state | default('update') }}"
+    certificate_authority_type: "{{ certificate_authority_type | default(certificate_authority_iac_config.type) }}"
+  when: certificate_authority_iac_config is not none
+
+- name: Set OpenSSL Certificate Authority Configuration
+  ansible.builtin.set_fact:
+    certificate_authority_openssl_common_name: "{{ certificate_authority_openssl_common_name | default(certificate_authority_iac_config.openssl.common_name | default(omit)) }}"
+    certificate_authority_openssl_organization: "{{ certificate_authority_openssl_organization | default(certificate_authority_iac_config.openssl.organization | default(omit)) }}"
+    certificate_authority_openssl_organization_unit: "{{ certificate_authority_openssl_organization_unit | default(certificate_authority_iac_config.openssl.organization_unit | default(omit)) }}"
+    certificate_authority_openssl_locality: "{{ certificate_authority_openssl_locality | default(certificate_authority_iac_config.openssl.locality | default(omit)) }}"
+    certificate_authority_openssl_state: "{{ certificate_authority_openssl_state | default(certificate_authority_iac_config.openssl.state | default(omit)) }}"
+    certificate_authority_openssl_country: "{{ certificate_authority_openssl_country | default(certificate_authority_iac_config.openssl.country | default(omit)) }}"
+  when:
+    - certificate_authority_iac_config is not none
+    - certificate_authority_type is defined
+    - certificate_authority_type | lower == 'openssl'
+
+- name: Set Microsoft Certificate Authority Configuration
+  ansible.builtin.set_fact:
+    certificate_authority_microsoft_server: "{{ certificate_authority_microsoft_server | default(certificate_authority_iac_config.microsoft.server | default(omit)) }}"
+    certificate_authority_microsoft_username: "{{ certificate_authority_microsoft_username | default(certificate_authority_iac_config.microsoft.username | default(omit)) }}"
+    certificate_authority_microsoft_password: "{{ certificate_authority_microsoft_password | default(certificate_authority_iac_config.microsoft.password | default(omit)) }}"
+    certificate_authority_microsoft_template_name: "{{ certificate_authority_microsoft_template_name | default(certificate_authority_iac_config.microsoft.template_name | default(omit)) }}"
+  when:
+    - certificate_authority_iac_config is not none
+    - certificate_authority_type is defined
+    - certificate_authority_type | lower == 'microsoft'
+
+- name: Set Certificate Authority Configuration
+  broadcom.vcf.sddc_manager_certificate_authority:
+    sddc_manager_hostname: "{{ all_iac_vars.sddc_manager.hostname }}"
+    sddc_manager_user: "{{ all_iac_vars.vsphere.vcenter.sso.username }}"
+    sddc_manager_password: "{{ vcenter_administrator_password | default(all_iac_vars.vsphere.vcenter.sso.password) }}"
+    state: "{{ certificate_authority_state }}"
+    ca_type: "{{ certificate_authority_type }}"
+    openssl_common_name: "{{ certificate_authority_openssl_common_name | default(omit) }}"
+    openssl_organization: "{{ certificate_authority_openssl_organization | default(omit) }}"
+    openssl_organization_unit: "{{ certificate_authority_openssl_organization_unit | default(omit) }}"
+    openssl_locality: "{{ certificate_authority_openssl_locality | default(omit) }}"
+    openssl_state: "{{ certificate_authority_openssl_state | default(omit) }}"
+    openssl_country: "{{ certificate_authority_openssl_country | default(omit) }}"
+    microsoft_server: "{{ certificate_authority_microsoft_server | default(omit) }}"
+    microsoft_username: "{{ certificate_authority_microsoft_username | default(omit) }}"
+    microsoft_password: "{{ certificate_authority_microsoft_password | default(omit) }}"
+    microsoft_template_name: "{{ certificate_authority_microsoft_template_name | default(omit) }}"
+  register: certificate_authority_result
+
+- name: Display Certificate Authority Result
+  ansible.builtin.debug:
+    msg: "{{ certificate_authority_result.msg }}"
+  when:
+    - certificate_authority_result is defined

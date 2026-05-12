@@ -1,0 +1,12 @@
+---
+# Base directory for infrastructure-as-code configuration files.
+working_dir: "{{ playbook_dir }}/../infra-as-code/"
+
+# Hierarchical path pattern for IaC structure with variable placeholders.
+iac_pattern: "global/regions/<region>/datacenters/<datacenter>/azs/<az>/vcfs/<vcf>/domains/<domain>"
+
+# Default configuration folder name.
+default_type_folder: config
+
+# Override to always load from default config folder instead of type_folder.
+always_load_default_config: false

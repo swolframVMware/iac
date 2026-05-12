@@ -1,0 +1,106 @@
+---
+# Copyright (c) Broadcom. All Rights Reserved.
+# The term "Broadcom" refers solely to the Broadcom Inc. corporate affiliate that
+# distributes this software.
+#
+# You are hereby granted a non-exclusive, worldwide, royalty-free license under
+# Broadcom's copyrights to use, copy, modify, and distribute this software in source
+# code or binary form for use in connection with Broadcom products.
+#
+# This copyright notice shall be included in all copies or substantial portions of the
+# software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+# PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+# CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+# OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+# ----------------------------------------------------------------------------------- #
+# Role: util.ssl_fingerprint
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This role retrieves the SSL certificate fingerprint from a target endpoint using
+#   OpenSSL. It validates the target host accessibility and the retrieved fingerprint
+#   format in SHA256 colon-separated hex format.
+# ----------------------------------------------------------------------------------- #
+# Input Variables:
+#   target_host: (Required) The hostname or IP address of the target endpoint.
+#   target_port: (Optional) The port number for SSL connection. Default: 443.
+# ----------------------------------------------------------------------------------- #
+# Output Variables:
+#   ssl_fingerprint: The SSL certificate fingerprint in SHA256 colon-separated hex
+#   format.
+# ----------------------------------------------------------------------------------- #
+
+- name: Set Internal Variables
+  ansible.builtin.set_fact:
+    _target_host: "{{ target_host }}"
+    _target_port: "{{ target_port | default(443) }}"
+
+- name: Validate Target Host
+  ansible.builtin.assert:
+    that:
+      - _target_host is defined
+      - _target_host | length > 0
+    fail_msg: "target_host must be provided when calling this role"
+
+- name: Validate Target Port
+  ansible.builtin.assert:
+    that:
+      - _target_port | int > 0
+      - _target_port | int <= 65535
+    fail_msg: "target_port must be a valid port number (1-65535)"
+
+- name: Check SSL Port Accessibility
+  ansible.builtin.wait_for:
+    host: "{{ _target_host }}"
+    port: "{{ _target_port }}"
+    timeout: 10
+    state: started
+  ignore_errors: true
+  register: ssl_port_check
+
+- name: Validate SSL Port Accessibility
+  ansible.builtin.assert:
+    that:
+      - ssl_port_check is not failed
+    fail_msg: |
+      SSL port {{ _target_port }} is not accessible on {{ _target_host }}.
+      
+      Possible causes:
+      - SSL/TLS service not available
+      - Firewall blocking port {{ _target_port }}
+      - Host is not reachable
+      - Network connectivity issues
+      
+      Please verify:
+        ping {{ _target_host }}
+        nc -zv {{ _target_host }} {{ _target_port }}
+
+- name: Get SSL Certificate Fingerprint
+  ansible.builtin.set_fact:
+    _retrieved_fingerprint: "{{ lookup('pipe', 'echo | openssl s_client -connect ' + _target_host + ':' + (_target_port | string) + ' 2>/dev/null | openssl x509 -noout -fingerprint -sha256 | cut -d\"=\" -f2') }}"
+
+- name: Validate Fingerprint Format
+  ansible.builtin.assert:
+    that:
+      - _retrieved_fingerprint | length > 0
+      - _retrieved_fingerprint is match('^[0-9A-F]{2}(:[0-9A-F]{2}){31}$')
+    fail_msg: |
+      Failed to retrieve valid SSL fingerprint from {{ _target_host }}:{{ _target_port }}.
+      Retrieved value: '{{ _retrieved_fingerprint }}'
+      
+      This may indicate:
+      - No SSL/TLS certificate available
+      - SSL/TLS service configuration issue
+      - Self-signed certificate issue
+      - Network timeout
+      - Command output format issue
+      
+      Try manual verification:
+        echo | openssl s_client -connect {{ _target_host }}:{{ _target_port }}
+
+- name: Set Fingerprint Fact
+  ansible.builtin.set_fact:
+    ssl_fingerprint: "{{ _retrieved_fingerprint }}"

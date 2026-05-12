@@ -1,0 +1,21 @@
+---
+# ----------------------------------------------------------------------------------- #
+# Default VCF Operations Configuration
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This file contains the default configuration settings for VCF Operations in a
+#   VMware Cloud Foundation deployment.
+#
+# Options:
+#   operations.appliance_size: Simple: xlarge, large, medium, small, xsmall | High Availability: xlarge, large, medium (Default: medium)
+#     Note: This is an override of the size defined in at the instance-level.
+#   operations.collector.appliance_size: standard, small (Default: standard)
+#     Note: This is an override of the size defined in at the instance-level.
+# ----------------------------------------------------------------------------------- #
+
+operations:
+  use_existing_deployment: false
+  fleet_management:
+    use_existing_deployment: false
+  collector:
+    use_existing_deployment: false

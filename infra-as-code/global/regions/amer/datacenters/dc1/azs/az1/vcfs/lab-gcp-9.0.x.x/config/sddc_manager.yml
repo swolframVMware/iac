@@ -1,0 +1,14 @@
+---
+# ----------------------------------------------------------------------------------- #
+# SDDC Manager Configuration
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This file contains the instance-level configuration for the VMware Cloud
+#   Foundation instance.
+# ----------------------------------------------------------------------------------- #
+
+sddc_manager:
+  hostname: sc-dc1-az1.corp.internal
+  root_password: "{{ vault_sddc_manager_root_password }}"
+  vcf_password: "{{ vault_sddc_manager_vcf_password }}"
+  admin_password: "{{ vault_sddc_manager_admin_password }}"

@@ -1,0 +1,14 @@
+---
+# ----------------------------------------------------------------------------------- #
+# Workload Domain Configuration
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This file contains the instance configuration for the VMware Cloud Foundation
+#   instance.
+#
+# Options:
+#   name: Name of the workload domain.
+# ----------------------------------------------------------------------------------- #
+
+domain:
+  name: dc1-az1-mg

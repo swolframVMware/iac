@@ -1,0 +1,39 @@
+---
+# Copyright (c) Broadcom. All Rights Reserved.
+# The term "Broadcom" refers solely to the Broadcom Inc. corporate affiliate that
+# distributes this software.
+#
+# You are hereby granted a non-exclusive, worldwide, royalty-free license under
+# Broadcom's copyrights to use, copy, modify, and distribute this software in source
+# code or binary form for use in connection with Broadcom products.
+#
+# This copyright notice shall be included in all copies or substantial portions of the
+# software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+# PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+# CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+# OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+# ----------------------------------------------------------------------------------- #
+# Role: sddc_manager.cluster_hosts
+# Task: Remove Hosts from Cluster
+# ----------------------------------------------------------------------------------- #
+
+- name: Check Status of Hosts to Remove
+  ansible.builtin.include_tasks: check_hosts_to_remove.yml
+
+- name: Generate Remove Hosts Payload
+  ansible.builtin.include_tasks: generate_remove_hosts_payload.yml
+
+- name: Validate Remove Hosts Payload
+  ansible.builtin.include_tasks: validate_remove_hosts_payload.yml
+
+- name: Remove Hosts from Cluster
+  ansible.builtin.include_tasks: remove_hosts.yml
+
+- name: Decommission Removed Hosts
+  ansible.builtin.include_tasks: decommission_hosts.yml
+  when: cluster_hosts_decommission_hosts | default(true) | bool
+

@@ -1,0 +1,31 @@
+---
+# ----------------------------------------------------------------------------------- #
+# NSX Configuration
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This file contains the domain-level configuration for the VMware Cloud Foundation
+#   instance.
+# ----------------------------------------------------------------------------------- #
+
+nsx:
+  deployment:
+    vip:
+      hostname: nsxlb-dc1-az1-w1.corp.internal
+    nodes: # 1 (Single) or 3 (HA) nodes. Only include the amount of nodes you need
+      - hostname: nsx1-dc1-az1-w1.corp.internal
+      - hostname: nsx2-dc1-az1-w1.corp.internal
+      - hostname: nsx3-dc1-az1-w1.corp.internal
+  transport_zone:
+    overlay:
+      name: vcf-host-tep-v40
+      port_groups:
+        - type: host_overlay
+          name: wld # Additional clusters use this for now
+          description: ESX Host Overlay TEP IP Pool
+          subnet: 172.16.40.0/24
+          gateway: 172.16.40.253
+          vlan: 40
+          vds_name: vds01
+          inclusion_range:
+            - start_ip_address: 172.16.40.33
+              end_ip_address: 172.16.40.65

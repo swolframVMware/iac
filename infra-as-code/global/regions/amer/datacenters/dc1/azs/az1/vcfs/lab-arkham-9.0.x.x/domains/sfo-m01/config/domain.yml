@@ -1,0 +1,14 @@
+---
+# ----------------------------------------------------------------------------------- #
+# Workload Domain Configuration
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This file contains the domain-level configuration for the VMware Cloud Foundation
+#   instance.
+#
+# Options:
+#   name: Name of the workload domain.
+# ----------------------------------------------------------------------------------- #
+
+domain:
+  name: sfo-m01

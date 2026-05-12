@@ -1,0 +1,81 @@
+---
+# Copyright (c) Broadcom. All Rights Reserved.
+# The term "Broadcom" refers solely to the Broadcom Inc. corporate affiliate that
+# distributes this software.
+#
+# You are hereby granted a non-exclusive, worldwide, royalty-free license under
+# Broadcom's copyrights to use, copy, modify, and distribute this software in source
+# code or binary form for use in connection with Broadcom products.
+#
+# This copyright notice shall be included in all copies or substantial portions of the
+# software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+# PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+# CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+# OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+# ----------------------------------------------------------------------------------- #
+# Role: vcf_installer.proxy
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This role is responsible for managing proxy configuration in a VCF Installer
+#   instance. It can enable or disable the proxy configuration.
+# ----------------------------------------------------------------------------------- #
+
+- name: Validate Proxy State Variable
+  ansible.builtin.assert:
+    that:
+      - proxy_state is defined
+      - proxy_state in ['enabled', 'disabled']
+    fail_msg: "proxy_state must be defined and set to 'enabled' or 'disabled'"
+
+- name: Find Proxy in IaC Configuration
+  ansible.builtin.set_fact:
+    proxy_iac_config: "{{ all_iac_vars.proxy | default(none) }}"
+
+- name: Set Proxy Enabled Flag Based on State
+  ansible.builtin.set_fact:
+    proxy_is_enabled: "{{ true if proxy_state == 'enabled' else false }}"
+
+- name: Set Proxy Configuration from IaC
+  ansible.builtin.set_fact:
+    proxy_host: "{{ proxy_host | default(proxy_iac_config.host | default(omit)) }}"
+    proxy_port: "{{ proxy_port | default(proxy_iac_config.port | default(3128)) }}"
+    proxy_transfer_protocol: "{{ proxy_transfer_protocol | default(proxy_iac_config.protocol | default('http')) }}"
+    proxy_is_authenticated: "{{ proxy_is_authenticated | default(proxy_iac_config.authenticate | default(false)) }}"
+    proxy_username: "{{ proxy_username | default(proxy_iac_config.username | default(omit)) }}"
+    proxy_password: "{{ proxy_password | default(proxy_iac_config.password | default(omit)) }}"
+  when: proxy_iac_config is not none
+
+- name: Configure Proxy Settings
+  broadcom.vcf.vcf_installer_proxy:
+    vcf_installer_hostname: "{{ all_iac_vars.vcf_installer.hostname }}"
+    vcf_installer_user: "{{ all_iac_vars.vcf_installer.username | default('admin@local') }}"
+    vcf_installer_password: "{{ vcf_installer_password | default(all_iac_vars.vcf_installer.password) }}"
+    host: "{{ proxy_host | default(omit) }}"
+    port: "{{ proxy_port | default(omit) }}"
+    is_enabled: "{{ proxy_is_enabled }}"
+    transfer_protocol: "{{ proxy_transfer_protocol | default(omit) }}"
+    is_authenticated: "{{ proxy_is_authenticated | default(omit) }}"
+    username: "{{ proxy_username | default(omit) }}"
+    password: "{{ proxy_password | default(omit) }}"
+  register: proxy_result
+
+- name: Display Proxy Result
+  ansible.builtin.debug:
+    msg: "{{ proxy_result.msg }}"
+  when: proxy_result is defined
+
+- name: Get Proxy Status Information
+  broadcom.vcf.vcf_installer_proxy_info:
+    vcf_installer_hostname: "{{ all_iac_vars.vcf_installer.hostname }}"
+    vcf_installer_user: "{{ all_iac_vars.vcf_installer.username | default('admin@local') }}"
+    vcf_installer_password: "{{ vcf_installer_password | default(all_iac_vars.vcf_installer.password) }}"
+  register: proxy_info
+
+- name: Display Status Message
+  ansible.builtin.debug:
+    msg: "{{ proxy_info.msg }}"
+  when: proxy_info is defined

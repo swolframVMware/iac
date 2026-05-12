@@ -1,0 +1,63 @@
+# Ignore editor directories.
+.idea/
+
+# Ignore local Ansible development configuration.
+ansible.cfg
+dev-env.sh
+
+# Only track Visual Code recommended extensions and standard settings.
+.vscode/*
+!.vscode/
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# Ignore temporary editor files.
+*~
+
+# Ignore macOS desktop services store files.
+**/.DS_Store
+
+# Ignore temporary Ansible playbook files.
+playbooks/*_temp.yml
+
+# Ignore local Ansible Navigator runtime artifacts.
+ansible-navigator.log
+ansible-navigator.log.*
+.ansible-navigator/
+
+# Ignore common Python virtual environments directories.
+venv/
+.venv/
+
+## Ignore MkDocs .site directory.
+**/.site/**
+
+# Ignore backup and frozen requirements files.
+requirements*.txt.bak
+requirements*frozen.txt
+
+# Ignore Ansible collection build artifacts.
+*.tar.gz
+broadcom.vcf-*/
+broadcom.vcf-*.tar.gz
+
+# Ignore Ansible test output directories.
+tests/output/
+.pytest_cache/
+.ansible_test/
+
+# Ignore Ansible Galaxy install directory, if present.
+# But track the requirements file for Ansible collections, if it exists.
+collections/*
+!collections/requirements.yml
+
+# Ignore Python cache files.
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Ignore istribution / packaging files.
+build/
+dist/
+*.egg-info/

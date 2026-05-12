@@ -1,0 +1,31 @@
+---
+# Copyright (c) Broadcom. All Rights Reserved.
+# The term "Broadcom" refers solely to the Broadcom Inc. corporate affiliate that
+# distributes this software.
+#
+# You are hereby granted a non-exclusive, worldwide, royalty-free license under
+# Broadcom's copyrights to use, copy, modify, and distribute this software in source
+# code or binary form for use in connection with Broadcom products.
+#
+# This copyright notice shall be included in all copies or substantial portions of the
+# software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+# PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+# CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+# OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+# ----------------------------------------------------------------------------------- #
+# Role: sddc_manager.nsx_edge_cluster
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This role manages NSX Edge clusters in a workload domain for VMware Cloud
+#   Foundation. It supports creating NSX Edge clusters with validation.
+#
+#   Note: NSX Edge cluster deletion is not supported by the VCF API. To remove an
+#   edge cluster, you must delete the associated workload domain.
+# ----------------------------------------------------------------------------------- #
+
+- name: Dispatch Based on NSX Edge Cluster State
+  ansible.builtin.include_tasks: "{{ edge_cluster_state }}.yml"

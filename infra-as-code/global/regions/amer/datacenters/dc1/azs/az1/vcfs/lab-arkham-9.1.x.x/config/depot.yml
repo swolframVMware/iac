@@ -1,0 +1,35 @@
+---
+# ----------------------------------------------------------------------------------- #
+# Depot Configuration
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This file contains the instance-level configuration for the VMware Cloud
+#   Foundation instance.
+#
+#   To enable or disable the depot, use the appropriate playbook:
+#     - Use 'enable_depot_installer.yml' to enable the depot configuration.
+#     - Use 'disable_depot_installer.yml' to disable (remove0 the depot configuration.
+#
+# Options:
+#   type: online | offline
+#     - Configures an online depot connection to the Broadcom Support Portal.
+#     - Configures an offline depot server for air-gapped or restricted network environments.
+#
+#   For online depot:
+#     activation_code: The activation code for the Broadcom Support Portal.
+#
+#   For offline depot:
+#     hostname: The hostname or IP address of the offline depot instance.
+#     port: The port number of the offline depot instance. (default: 443)
+#     username: The username for authenticating with the offline depot instance.
+#     password: The password for authenticating with the offline depot instance.
+#     ssl_thumbprint: The SSL thumbprint of the offline depot instance certificate.
+#       If not provided, the thumbprint will be dynamically retrieved.
+#
+# ----------------------------------------------------------------------------------- #
+
+depot:
+  type: offline
+  hostname: "depot.rainpole.io"
+  username: "vcf"
+  port: 443

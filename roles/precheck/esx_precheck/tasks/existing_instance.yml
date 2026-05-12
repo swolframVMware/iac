@@ -1,0 +1,97 @@
+---
+# Copyright (c) Broadcom. All Rights Reserved.
+# The term "Broadcom" refers solely to the Broadcom Inc. corporate affiliate that
+# distributes this software.
+#
+# You are hereby granted a non-exclusive, worldwide, royalty-free license under
+# Broadcom's copyrights to use, copy, modify, and distribute this software in source
+# code or binary form for use in connection with Broadcom products.
+#
+# This copyright notice shall be included in all copies or substantial portions of the
+# software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+# PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+# CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+# OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+# ----------------------------------------------------------------------------------- #
+# Role: precheck.esx_precheck
+# Task: ESX precheck for an existing VCF instance.
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This task checks the pre-requisites for ESX hosts in an existing VCF instance.
+# ----------------------------------------------------------------------------------- #
+
+- name: Initialize ESX Hosts Input
+  ansible.builtin.set_fact:
+    esx_hosts_to_check: "{{ hosts_input | default([]) }}"
+
+- name: Initialize ESX Hosts from Inventory
+  ansible.builtin.include_role:
+    name: broadcom.vcf.precheck.get_esx_hosts
+  when: esx_hosts_to_check | length == 0
+
+- name: Set ESX Host List from Input
+  ansible.builtin.set_fact:
+    esx_host_list: "{{ (esx_hosts_to_check if (esx_hosts_to_check is not string) else [esx_hosts_to_check]) }}"
+  when: esx_hosts_to_check | length > 0
+
+- name: Normalize ESX Host List from Inventory
+  ansible.builtin.set_fact:
+    esx_host_list: "{{ esx_host_list | map(attribute='hostname') | list }}"
+  when: esx_hosts_to_check | length == 0
+
+- name: Get All Assigned ESX Hosts
+  broadcom.vcf.sddc_manager_host_info:
+    sddc_manager_hostname: "{{ all_iac_vars.sddc_manager.hostname }}"
+    sddc_manager_user: "{{ all_iac_vars.vsphere.vcenter.sso.username }}"
+    sddc_manager_password: "{{ vcenter_administrator_password | default(all_iac_vars.vsphere.vcenter.sso.password) }}"
+    host_status: ASSIGNED
+  register: allocated_host_info
+  failed_when: false
+
+- name: Set Empty Assigned ESX Hosts
+  ansible.builtin.set_fact:
+    assigned_hosts: []
+  when: allocated_host_info.failed | default(false)
+
+- name: Extract Assigned ESX Hosts
+  ansible.builtin.set_fact:
+    assigned_hosts: "{{ allocated_host_info.meta | list }}"
+  when: not (allocated_host_info.failed | default(false))
+
+- name: Filter Out Assigned ESX Hosts
+  ansible.builtin.set_fact:
+    hosts_to_precheck: "{{ esx_host_list | difference(assigned_hosts) }}"
+    hosts_skipped: "{{ esx_host_list | intersect(assigned_hosts) }}"
+
+- name: Display Status Message
+  ansible.builtin.debug:
+    msg: "The following hosts will be checked: {{ hosts_to_precheck | join(', ') }}"
+  when: hosts_to_precheck | length > 0
+
+- name: No Unmanaged ESX Hosts
+  ansible.builtin.meta: end_play
+  when: hosts_to_precheck | length == 0
+
+- name: Check ESX Host Connectivity
+  ansible.builtin.include_role:
+    name: broadcom.vcf.precheck.esx_connection
+
+- name: Check ESX Host Certificate
+  ansible.builtin.include_role:
+    name: broadcom.vcf.precheck.esx_certificate
+
+- name: Check ESX Host Standard Switch
+  ansible.builtin.include_role:
+    name: broadcom.vcf.precheck.esx_standard_switch
+
+- name: Check ESX Host SSH Service
+  ansible.builtin.include_role:
+    name: broadcom.vcf.precheck.esx_ssh
+
+- name: Check ESX Host NTP Configuration
+  ansible.builtin.include_role:
+    name: broadcom.vcf.precheck.esx_ntp

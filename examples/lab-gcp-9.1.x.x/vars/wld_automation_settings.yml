@@ -1,0 +1,71 @@
+---
+# ----------------------------------------------------------------------------------- #
+# Example Template for Global Cloud Platform Lab (Simulating Inputs from AAP Survey)
+# ----------------------------------------------------------------------------------- #
+
+# ----------------------------------------------------------------------------------- #
+# Obtain the infrastructure-as-code configuration from a Git repository.
+# ----------------------------------------------------------------------------------- #
+
+# Git Repository URL and Branch
+# iac_git_url: ssh://git@github-vcf.devops.broadcom.net/PSO/ansible-collection-vcf-iac-examples.git
+# iac_git_branch: main
+
+# ----------------------------------------------------------------------------------- #
+# Set the following variables to define the infrastructure-as-code search path.
+# ----------------------------------------------------------------------------------- #
+
+region: amer
+datacenter: dc1
+az: az1
+vcf: lab-gcp-9.1.x.x
+domain: wld
+
+# ----------------------------------------------------------------------------------- #
+# Obtain the passwords from an encrypted Ansible Vault file.
+# ----------------------------------------------------------------------------------- #
+
+# VCF Installer
+vcf_installer_password: "{{ vault_vcf_installer_password }}"
+vcf_installer_local_password: "{{ vault_vcf_installer_local_password }}"
+vcf_installer_root_password: "{{ vault_vcf_installer_root_password }}"
+vcf_installer_vsphere_password: "{{ vault_vcf_installer_vsphere_password }}"
+
+# SDDC Manager
+sddc_manager_vcf_password: "{{ vault_sddc_manager_vcf_password }}"
+sddc_manager_root_password: "{{ vault_sddc_manager_root_password }}"
+sddc_manager_admin_password: "{{ vault_sddc_manager_admin_password }}"
+
+# ESX
+esx_host_password: "{{ vault_esx_host_password }}"
+
+# vCenter
+vcenter_root_password: "{{ vault_vcenter_root_password }}"
+vcenter_administrator_password: "{{ vault_vcenter_administrator_password }}"
+sso_domain_password: "{{ vault_sso_domain_password }}"
+
+# NSX
+nsx_root_password: "{{ vault_nsx_root_password }}"
+nsx_admin_password: "{{ vault_nsx_admin_password }}"
+nsx_audit_password: "{{ vault_nsx_audit_password }}"
+
+# NSX Edge
+edge_root_password: "{{ vault_edge_root_password }}"
+edge_admin_password: "{{ vault_edge_admin_password }}"
+edge_audit_password: "{{ vault_edge_audit_password }}"
+bgp_peer_password: "{{ vault_bgp_peer_password }}"
+
+# VCF Operations
+operations_root_password: "{{ vault_operations_root_password }}"
+operations_admin_password: "{{ vault_operations_admin_password }}"
+collector_root_password: "{{ vault_collector_root_password }}"
+
+# VCF Automation
+automation_admin_password: "{{ vault_automation_admin_password }}"
+
+# ----------------------------------------------------------------------------------- #
+# Set the variables below to define the inputs to the automation workflows.
+# ----------------------------------------------------------------------------------- #
+
+# cluster_input: dc1-az1-w1-cl01
+# hosts_input: ["esx-10a.corp.internal"]

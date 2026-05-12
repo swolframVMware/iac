@@ -1,0 +1,70 @@
+---
+# Copyright (c) Broadcom. All Rights Reserved.
+# The term "Broadcom" refers solely to the Broadcom Inc. corporate affiliate that
+# distributes this software.
+#
+# You are hereby granted a non-exclusive, worldwide, royalty-free license under
+# Broadcom's copyrights to use, copy, modify, and distribute this software in source
+# code or binary form for use in connection with Broadcom products.
+#
+# This copyright notice shall be included in all copies or substantial portions of the
+# software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+# PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+# CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+# OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+# ----------------------------------------------------------------------------------- #
+# Role: vcf_installer.appliance
+# Task: Validate vSphere Resources for VCF Installer Deployment
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This task validates that all required vSphere resources exist before deploying
+#   the VCF Installer appliance.
+# ----------------------------------------------------------------------------------- #
+
+- name: Validate vSphere Resources for VCF Installer Deployment
+  broadcom.vcf.vcf_installer_appliance:
+    hostname: "{{ all_iac_vars.vcf_installer.deployment.hostname }}"
+    username: "{{ all_iac_vars.vcf_installer.deployment.username }}"
+    password: "{{ vsphere_password | default(all_iac_vars.vcf_installer.deployment.password) }}"
+    port: "{{ all_iac_vars.vcf_installer.deployment.port | default(443) }}"
+    validate_certs: "{{ all_iac_vars.vcf_installer.deployment.validate_certs | default(false) }}"
+    datacenter: "{{ all_iac_vars.vcf_installer.deployment.datacenter }}"
+    cluster: "{{ all_iac_vars.vcf_installer.deployment.cluster | default(omit) }}"
+    esx_hostname: "{{ all_iac_vars.vcf_installer.deployment.esx_hostname | default(omit) }}"
+    datastore: "{{ all_iac_vars.vcf_installer.deployment.datastore }}"
+    folder: "{{ all_iac_vars.vcf_installer.folder | default(omit) }}"
+    networks: "{{ all_iac_vars.vcf_installer.networks }}"
+    state: validate
+  register: validation_result
+  delegate_to: localhost
+
+- name: Display Validation Results
+  ansible.builtin.debug:
+    msg:
+      - "vSphere Resource Validation Results:"
+      - "  Overall Status: {{ 'VALID' if validation_result.validation.valid else 'INVALID' }}"
+      - "  Datacenter: {{ 'EXISTS' if validation_result.validation.datacenter.exists else 'NOT FOUND' }}"
+      - "  {% if all_iac_vars.vcf_installer.deployment.cluster is defined %}Cluster: {{ 'EXISTS' if validation_result.validation.cluster.exists else 'NOT FOUND' }}{% endif %}"
+      - "  {% if all_iac_vars.vcf_installer.deployment.esx_hostname is defined %}ESXi Host: {{ 'EXISTS' if validation_result.validation.esx_host.exists else 'NOT FOUND' }}{% endif %}"
+      - "  Datastore: {{ 'EXISTS' if validation_result.validation.datastore.exists else 'NOT FOUND' }} {% if validation_result.validation.datastore.exists %}(Free: {{ validation_result.validation.datastore.free_space_gb }}GB){% endif %}"
+      - "  {% if all_iac_vars.vcf_installer.folder is defined %}Folder: {{ 'EXISTS' if validation_result.validation.folder.exists else 'NOT FOUND' }}{% endif %}"
+      - "  Networks:"
+      - "  {% for network_name, network_info in validation_result.validation.networks.items() %}  - {{ network_name }}: {{ 'EXISTS' if network_info.exists else 'NOT FOUND' }}{% endfor %}"
+
+- name: Display Missing Resources
+  ansible.builtin.debug:
+    msg:
+      - "Missing Resources:"
+      - "{{ validation_result.missing_resources }}"
+  when: not validation_result.validation.valid
+
+- name: Fail if Validation Failed
+  ansible.builtin.fail:
+    msg: "Validation failed. Missing or inaccessible resources: {{ validation_result.missing_resources | join(', ') }}"
+  when:
+    - not validation_result.validation.valid
+    - not ansible_check_mode

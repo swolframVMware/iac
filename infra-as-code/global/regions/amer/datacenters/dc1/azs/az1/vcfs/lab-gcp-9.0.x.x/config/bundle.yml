@@ -1,0 +1,48 @@
+---
+# ----------------------------------------------------------------------------------- #
+# Bundle Configuration
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This file contains the instance-level configuration for the VMware Cloud
+#   Foundation instance.
+#
+# Options:
+#   release_version: The release version to download bundles for (e.g., "9.0.2.0")
+#   download_all: true | false
+#     - true: Download all available installation bundles for the release version.
+#     - false: Download only specified installation bundles for the release version.
+#   components: List of product types to download (only used when download_all: false)
+#     Valid user-friendly names:
+#       - cloud-proxy                          # Cloud Proxy
+#       - nsx                                  # NSX
+#       - sddc-manager                         # SDDC Manager
+#       - vcenter                              # vCenter
+#       - vcf-automation                       # VCF Automation
+#       - vcf-operations                       # VCF Operations
+#       - vcf-operations-fleet                 # VCF Operations Fleet Management
+#   download_options:
+#     wait_for_completion: true | false
+#       - true: Wait for each bundle download to complete before proceeding.
+#       - false: Initiate downloads asynchronously.
+#     timeout: Maximum time in seconds to wait for each bundle download (default: 3600).
+#     retry_count: Number of times to retry failed downloads (default: 3).
+#     retry_delay: Seconds to wait between retries (default: 60).
+# ----------------------------------------------------------------------------------- #
+
+bundle:
+  releases:
+    - release_version: "9.0.2.0"
+      download_all: true
+      components:
+        - cloud-proxy
+        - nsx
+        - sddc-manager
+        - vcenter
+        - vcf-automation
+        - vcf-operations
+        - vcf-operations-fleet
+  download_options:
+    wait_for_completion: true
+    timeout: 7200
+    retry_count: 3
+    retry_delay: 60

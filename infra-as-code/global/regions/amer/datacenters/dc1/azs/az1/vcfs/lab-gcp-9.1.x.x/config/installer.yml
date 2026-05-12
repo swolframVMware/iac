@@ -1,0 +1,99 @@
+---
+# ----------------------------------------------------------------------------------- #
+# VCF Installer Configuration
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This file contains the instance-level configuration for the VMware Cloud
+#   Foundation instance.
+#
+# Required Configuration:
+#   - hostname                      : FQDN of the VCF Installer appliance
+#   - username                      : Full username for API access (e.g., 'admin@local')
+#   - ip_address                    : IP address for the appliance
+#   - netmask                       : Network subnet mask
+#   - gateway                       : Default gateway IP
+#   - vm_name                       : Name of the VM in vCenter
+#   - ova_path OR ova_url           : Path to OVA file or URL
+#   - networks                      : OVF network to vSphere network mapping
+#   - deployment.hostname           : vCenter or ESX host FQDN/IP
+#   - deployment.username           : vCenter or ESX username
+#   - deployment.password           : vCenter or ESX password
+#   - deployment.datacenter         : vCenter datacenter name
+#   - deployment.cluster            : vCenter cluster name (or esx_hostname)
+#   - deployment.datastore          : vCenter or ESX datastore name
+#   - deployment.folder             : vCenter folder path (default: /<datacenter>/vm)
+#   - deployment.resource_pool      : vCenter resource pool name (default: Resources)
+#
+# Optional Configuration (with defaults):
+#   - ova_url_username              : Username to authenticate with OVA URL (default: none)
+#   - ova_url_password              : Password to authenticate with OVA URL (default: none)
+#   - deployment.disk_provisioning  : Disk type (default: thin)
+#   - power_on                      : Power on after deployment (default: true)
+#   - wait_for_ip                   : Wait for IP address (default: true)
+#   - allow_duplicates              : Allow duplicate VM names (default: false)
+#   - validate_deployment           : Wait for API after deployment (default: true)
+#   - validation_retries            : API check retry count (default: 60, ~30 minutes total)
+#   - validation_delay              : Seconds between retries (default: 30)
+#
+# DNS/NTP Configuration:
+#   - Uses shared dns.yml and ntp.yml by default
+#   - Override with dns_servers/ntp_servers if needed
+#
+# Usage:
+#   ansible-playbook playbooks/remove_installer_appliance.yml \
+#     -e @examples/lab-arkham/vars/installer_automation_settings.yml
+#
+# States:
+#   - present  : Deploy the appliance (default)
+#   - absent   : Remove the appliance
+#   - validate : Validate vSphere resources only
+# ----------------------------------------------------------------------------------- #
+
+vcf_installer:
+  hostname: vin-dc1.corp.internal
+  # username: admin@local
+  # password: "{{ vault_vcf_installer_password }}"
+  # vm_name:
+
+  # Network Configuration
+  # ip_address:
+  # netmask:
+  # gateway:
+
+  # Optional: Override shared DNS/NTP settings.
+  # dns_servers:
+  #   - 192.168.0.253
+  # ntp_servers:
+  #   - 192.168.0.253
+  # dns_domain:
+  #   - corp.local
+  # dns_search:
+  #   - corp.local
+
+  # Optional: Override default deployment options.
+  # validate_deployment: true                                                                 # Role default: true
+  # validation_retries: 60                                                                    # Role default: 60 (~30 min with 30s delay)
+  # validation_delay: 30                                                                      # Role default: 30 seconds
+
+  # vSphere Deployment Target
+  # deployment:
+  #  ova_path: /mnt/f/VCF-SDDC-Manager-Appliance-9.x.x.x.xxxxxxxx.ova                         # Required. Only one of 'ova_path' or 'ova_url'.
+  #  ova_url: https://packages.example.com/VCF-SDDC-Manager-Appliance-9.x.x.x.xxxxxxxx.ova    # Required. Only one of 'ova_path' or 'ova_url'.
+  #  ova_url_username: username                                                               # Optional. Username to authenticate with the 'ova_url'.
+  #  ova_url_password: "{{ vcf_installer_ova_url_password }}"                                 # Optional. Password to authenticate with the 'ova_url'.
+  #  hostname:                                                                                # Required. vCenter or ESX host FQDN/IP
+  #  username:                                                                                # Required. Example: administrator@vsphere.local or root
+  #  password: "{{ vcf_installer_vsphere_password }}"                                         # Required.
+  #  port: 443                                                                                # Optional. Module default: 443
+  #  validate_certs: false                                                                    # Optional. Module default: true
+  #  datacenter:                                                                              # Required for vCenter; Omit for ESX
+  #  cluster:                                                                                 # Required for vCenter; Omit for ESX
+  #  datastore:                                                                               # Required.
+  #  disk_provisioning: thin                                                                  # Optional. Module default: thin
+  #  folder: /sfo-m01-dc01/vm                                                                 # Optional. Module default: /<datacenter>/vm
+  #  resource_pool: Resources                                                                 # Optional. Module default: Resources
+  #  networks:                                                                                # Required. OVF Network Name: vSphere Port Group Name
+  #    "Network 1": ""                                                                        #           Network 1: vSphere Port Group Name
+  #  power_on: true                                                                           # Optional. Module default: true
+  #  wait_for_ip: true                                                                        # Optional. Module default: true
+  #  allow_duplicates: false                                                                  # Optional. Module default: false

@@ -1,0 +1,17 @@
+HostDecommissionSpec:
+{% if cluster_input is defined and vsphere.datacenter.clusters is defined %}
+{% for cluster in vsphere.datacenter.clusters %}
+{% if cluster.name == cluster_input %}
+{% set hosts_to_process = hosts_input | default([]) %}
+{% for host in cluster.esx_hosts %}
+{% if not hosts_input | default([]) or host.hostname in hosts_to_process %}
+  - fqdn: {{ host.hostname }}
+{% endif %}
+{% endfor %}
+{% endif %}
+{% endfor %}
+{% else %}
+{% for host in hosts_input | default([]) %}
+  - fqdn: {{ host }}
+{% endfor %}
+{% endif %}

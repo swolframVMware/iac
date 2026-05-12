@@ -1,0 +1,36 @@
+---
+# ----------------------------------------------------------------------------------- #
+# Backup Configuration
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This file contains the instance-level configuration for the VMware Cloud
+#   Foundation instance.
+#
+#   To configure backup, use the appropriate playbook:
+#     - Use 'update_backup.yml' to configure backup with these settings.
+#
+# Options:
+#   backupLocations: List of backup server configurations
+#     - server: IP address or FQDN of backup server
+#     - port: Port number of backup server (default: 22 for SFTP)
+#     - protocol: SFTP (currently only SFTP is supported)
+#     - username: Username to authenticate with the backup server
+#     - directoryPath: Directory path on the backup server for storing backups
+#   backupSchedules: List of backup schedule configurations (optional)
+#   isConfigured: true | false - Indicates if backup is configured
+#
+# Note:
+#   - Password/SSH key for backup server must be provided via Ansible variables.
+#   - Backup configuration requires network connectivity to the backup server.
+#   - Ensure sufficient storage space is available on the backup server.
+# ----------------------------------------------------------------------------------- #
+
+backup:
+  backupLocations:
+    - server: 10.167.173.125
+      port: 22
+      protocol: SFTP
+      username: svc-vcf-bck
+      directoryPath: /media/backups/
+  backupSchedules: []
+  isConfigured: True

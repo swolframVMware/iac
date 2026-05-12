@@ -1,0 +1,49 @@
+---
+# Copyright (c) Broadcom. All Rights Reserved.
+# The term "Broadcom" refers solely to the Broadcom Inc. corporate affiliate that
+# distributes this software.
+#
+# You are hereby granted a non-exclusive, worldwide, royalty-free license under
+# Broadcom's copyrights to use, copy, modify, and distribute this software in source
+# code or binary form for use in connection with Broadcom products.
+#
+# This copyright notice shall be included in all copies or substantial portions of the
+# software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+# PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+# CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+# OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+# ----------------------------------------------------------------------------------- #
+# Role: sddc_manager.workload_domain
+# Task: Ensure Workload Domain is Absent
+# ----------------------------------------------------------------------------------- #
+# Description:
+# This task ensures that a specified workload domain is removed from a VMware Cloud
+# Foundation instance. The task performs the following steps:
+# - Look up the workload domain by name -> ID.
+# - Collect cluster and host information (if decommissioning is enabled).
+# - Remove the workload domain.
+# - Wait for the removal task to complete.
+# - Decommission hosts (if enabled).
+# ----------------------------------------------------------------------------------- #
+
+- name: Lookup Workload Domain by Name
+  ansible.builtin.include_tasks: lookup_domain.yml
+
+- name: Get Workload Domain Resources
+  ansible.builtin.include_tasks: decommission_info.yml
+  when:
+    - workload_domain_decommission_hosts | bool
+
+- name: Remove Workload Domain
+  ansible.builtin.include_tasks: remove_domain.yml
+
+- name: Decommission Workload Domain Resources
+  ansible.builtin.include_tasks: decommission_resources.yml
+  when:
+    - workload_domain_decommission_hosts | bool
+    - hosts_to_decommission is defined
+    - hosts_to_decommission | length > 0

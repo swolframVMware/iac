@@ -1,0 +1,31 @@
+---
+# ----------------------------------------------------------------------------------- #
+# Instance Configuration
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This file contains the instance-level configuration for the VMware Cloud
+#   Foundation instance.
+#
+# Options:
+#   version: The version of the VMware Cloud Foundation instance.
+#   skip_gateway_ping_validation: Skip gateway connectivity validation during instance deployment (default: false).
+#   enable_custom_certificates: Enable custom certificates for the instance (default: false).
+#   custom_certificates: Configuration for custom certificates (optional).
+#     - root_ca_certs: List of root CA certificate configurations.
+#       - alias: Alias for the certificate.
+#       - cert_chain: List of certificate chain entries.
+#         - Certificate data in PEM format.
+# ----------------------------------------------------------------------------------- #
+
+instance:
+  version: 9.0.2.0
+  name: vcf-lab-arkham
+  enable_custom_certificates: false
+  custom_certificates:
+    root_ca_certs:
+      - alias: lab-arkham-ca
+        cert_chain:
+          - |
+            -----BEGIN CERTIFICATE-----
+            # Insert the certificate data here.
+            -----END CERTIFICATE-----

@@ -1,0 +1,105 @@
+---
+# ----------------------------------------------------------------------------------- #
+# vSphere Configuration
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This file contains the domain-level configuration for the VMware Cloud Foundation
+#   instance.
+# ----------------------------------------------------------------------------------- #
+
+vsphere:
+  vcenter:
+    hostname: sfo-m01-vc01.sfo.rainpole.io
+    subnet_mask: 255.255.255.0
+    gateway: 10.11.10.1
+    use_existing_deployment: false
+  datacenter:
+    name: sfo-m01-dc01
+    clusters:
+      - name: sfo-m01-cl01 # bring-up json will take first element
+        evc_mode: ''
+        high_availability: true
+        host_pool: # ip pools for vsan and vmotion. additional clusters use this pool
+          name: sfo-m01-r01-network-pool-01
+          networks:
+            - VSAN
+            - VMOTION
+        mgmt_port_groups:
+          MANAGEMENT:
+            name: sfo-m01-cl01-vds01-pg-esx-mgmt
+            vds_name: vds01
+            type: mgmt
+            teaming_policy: loadbalance_loadbased
+            active_uplinks:
+              - uplink1
+              - uplink2
+            standby_uplinks: []
+            vlan: 1111
+            mtu: 1500
+            subnet: 10.11.11.0/24
+            gateway: 10.11.11.1
+            subnetMask: null
+          VMOTION:
+            name: sfo-m01-cl01-vds01-pg-vmotion
+            vds_name: vds01
+            type: vmotion
+            teaming_policy: loadbalance_loadbased
+            active_uplinks:
+              - uplink1
+              - uplink2
+            standby_uplinks: []
+            vlan: 1112
+            mtu: 8900
+            subnet: 10.11.12.0/24
+            gateway: 10.11.12.1
+            subnetMask: null
+            inclusion_range:
+              - start_ip_address: 10.11.12.101
+                end_ip_address: 10.11.12.116
+          VSAN:
+            name: sfo-m01-cl01-vds01-pg-vsan
+            vds_name: vds01
+            type: vsan
+            teaming_policy: loadbalance_loadbased
+            active_uplinks:
+              - uplink1
+              - uplink2
+            standby_uplinks: []
+            vlan: 1113
+            mtu: 8900
+            subnet: 10.11.13.0/24
+            gateway: 10.11.13.1
+            subnetMask: null
+            inclusion_range:
+              - start_ip_address: 10.11.13.101
+                end_ip_address: 10.11.13.116
+          VM_MANAGEMENT: # Only needed for mgmt domain
+            name: sfo-m01-cl01-vds01-pg-vm-mgmt
+            vds_name: vds01
+            type: vm-mgmt
+            teaming_policy: loadbalance_loadbased
+            active_uplinks:
+              - uplink1
+              - uplink2
+            standby_uplinks: []
+            vlan: 1110
+            mtu: 1500
+            subnet: 10.11.10.0/24
+            gateway: 10.11.10.1
+            subnetMask: null
+        storage:
+          vsan:
+            datastore_name: sfo-m01-cl01-ds-vsan01
+            vsan_type: esa
+            enable_vsan_esa: true
+        vds_connection:
+          - vds_name: vds01 # mgmt, vm-mgmt, vmotion, vsan, overlay
+        esx_hosts:
+          - hostname: sfo01-m01-r01-esx01.sfo.rainpole.io
+          - hostname: sfo01-m01-r01-esx02.sfo.rainpole.io
+          - hostname: sfo01-m01-r01-esx03.sfo.rainpole.io
+          - hostname: sfo01-m01-r01-esx04.sfo.rainpole.io
+          - hostname: sfo01-m01-r01-esx05.sfo.rainpole.io
+          - hostname: sfo01-m01-r01-esx06.sfo.rainpole.io
+          - hostname: sfo01-m01-r01-esx07.sfo.rainpole.io
+          - hostname: sfo01-m01-r01-esx08.sfo.rainpole.io

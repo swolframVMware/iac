@@ -1,0 +1,11 @@
+---
+- name: "Start NSX-T SSH Service on {{ item.hostname }}"
+  ansible.builtin.uri:
+    url: "https://{{ item.hostname }}/api/v1/node/services/ssh?action=start"
+    method: POST
+    user: "admin"
+    password: "{{ nsx_admin_password }}"
+    force_basic_auth: yes
+    body_format: json
+    validate_certs: false
+    status_code: [200, 204]

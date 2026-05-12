@@ -1,0 +1,21 @@
+---
+# ----------------------------------------------------------------------------------- #
+# VCF Automation Configuration
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This file contains the instance-level configuration for the VMware Cloud
+#   Foundation instance.
+# ----------------------------------------------------------------------------------- #
+
+automation:
+  hostname: valb-dc1.corp.internal
+  admin_password: "{{ vault_automation_admin_password }}"
+  services_runtime_hostname: vsp-va-dc1.corp.internal
+  node_ips:
+    - 172.16.10.41
+    - 172.16.10.42
+    - 172.16.10.43
+    - 172.16.10.44
+    - 172.16.10.45
+  node_prefix: vcfa-dc1
+  internal_cluster_cidr: 240.0.0.0/15

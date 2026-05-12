@@ -1,0 +1,200 @@
+---
+# Copyright (c) Broadcom. All Rights Reserved.
+# The term "Broadcom" refers solely to the Broadcom Inc. corporate affiliate that
+# distributes this software.
+#
+# You are hereby granted a non-exclusive, worldwide, royalty-free license under
+# Broadcom's copyrights to use, copy, modify, and distribute this software in source
+# code or binary form for use in connection with Broadcom products.
+#
+# This copyright notice shall be included in all copies or substantial portions of the
+# software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+# PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+# CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+# OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+# ----------------------------------------------------------------------------------- #
+# Playbook: Adds Installation Bundles to VCF Installer
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This playbook adds installation bundles to a VCF Installer instance for the
+#   releases and/or components.
+#
+# Variables:
+#   All variables can be provided using command-line inputs or a vars file:
+#
+#   Required for IaC Configuration Loading:
+#   - region     : Region identifier (e.g., 'amer', 'emea', 'apac')
+#   - datacenter : Datacenter identifier (e.g., 'dc01', 'dc02')
+#   - az         : Availability zone identifier (e.g., 'az01', 'az02')
+#   - vcf        : VCF instance identifier (e.g., 'lab', 'prod')
+#   - domain     : VCF domain identifier (e.g., 'm01', 'w01')
+#
+# Usage Examples:
+#   # Using a vars file:
+#   ansible-playbook playbooks/add_bundles_installer\.yml \
+#     -e @examples/lab-arkham/vars/mgmt_automation_settings.yml
+#
+#   # Using inline variables:
+#   ansible-playbook playbooks/add_bundles_installer\.yml \
+#     -e "region=amer datacenter=dc01 az=az01 vcf=lab domain=m01"
+#
+# ----------------------------------------------------------------------------------- #
+
+- name: Add Bundles to VCF Installer
+  hosts: localhost
+  gather_facts: false
+
+  vars:
+    _component_api_map:
+      avi-lb: NSX_ALB
+      cloud-proxy: VCF_OPS_CLOUD_PROXY
+      fleet-lcm: VCF_FLEET_LCM
+      identity-broker: VIDB
+      license-server: VCF_LICENSE_SERVER
+      migration-services-engine: VCF_SERVICE_VCD_MIGRATION_BACKEND
+      nsx: NSX_T_MANAGER
+      salt-master: VCF_SALT
+      salt-raas: VCF_SALT_RAAS
+      sddc-lcm: VCF_SDDC_LCM
+      sddc-manager: SDDC_MANAGER
+      software-depot: DEPOT_SERVICE
+      telemetry: TELEMETRY_ACCEPTOR
+      vcenter: VCENTER
+      vcf-automation: VRA
+      vcf-operations: VROPS
+      vcf-operations-fleet: VRSLCM
+      vcf-operations-hcx: HCX
+      vcf-service-runtime: VSP
+
+    _component_name_map:
+      DEPOT_SERVICE: Software Depot
+      HCX: VCF Operations HCX
+      NSX_ALB: Avi Load Balancer
+      NSX_T_MANAGER: NSX
+      SDDC_MANAGER: SDDC Manager
+      TELEMETRY_ACCEPTOR: Telemetry
+      VCENTER: vCenter
+      VCF_FLEET_LCM: Fleet Lifecycle
+      VCF_LICENSE_SERVER: License Server
+      VCF_OPS_CLOUD_PROXY: Cloud Proxy
+      VCF_SALT: Salt Master
+      VCF_SALT_RAAS: Salt RaaS
+      VCF_SDDC_LCM: SDDC Lifecycle
+      VCF_SERVICE_VCD_MIGRATION_BACKEND: Migration Service Engine
+      VIDB: Identity Broker
+      VRA: VCF Automation
+      VROPS: VCF Operations
+      VRSLCM: VCF Operations Fleet Management
+      VSP: VCF Services Runtime
+
+  tasks:
+    - name: Load IaC Configuration
+      ansible.builtin.include_role:
+        name: broadcom.vcf.iac.get_settings
+
+    - name: Validate Bundle Configuration
+      ansible.builtin.assert:
+        that:
+          - all_iac_vars.bundle is defined
+          - all_iac_vars.bundle.releases is defined
+          - all_iac_vars.bundle.releases | length > 0
+        fail_msg: "bundle.yml must define at least one release under bundle.releases"
+
+    - name: Get Bundle Add Status per Release
+      broadcom.vcf.vcf_installer_bundle_info:
+        vcf_installer_hostname: "{{ all_iac_vars.vcf_installer.hostname }}"
+        vcf_installer_user: "{{ all_iac_vars.vcf_installer.username | default('admin@local') }}"
+        vcf_installer_password: "{{ vcf_installer_password | default(all_iac_vars.vcf_installer.password) }}"
+        operation: download_status
+        release_version: "{{ item.release_version }}"
+      loop: "{{ all_iac_vars.bundle.releases }}"
+      loop_control:
+        label: "release={{ item.release_version }}"
+      register: release_status_results
+
+    - name: Build Bundle Status Snapshot
+      ansible.builtin.set_fact:
+        all_bundle_elements: "{{ release_status_results.results | map(attribute='download_status.elements') | list | flatten }}"
+        bundle_status_counts:
+          total: "{{ (release_status_results.results | map(attribute='download_status.elements') | list | flatten) | length }}"
+          successful: "{{ (release_status_results.results | map(attribute='download_status.elements') | list | flatten | selectattr('downloadStatus', 'equalto', 'SUCCESSFUL') | list | length) + (release_status_results.results | map(attribute='download_status.elements') | list | flatten | selectattr('downloadStatus', 'equalto', 'SUCCESS') | list | length) }}"
+          pending: "{{ release_status_results.results | map(attribute='download_status.elements') | list | flatten | selectattr('downloadStatus', 'equalto', 'PENDING') | list | length }}"
+          in_progress: "{{ release_status_results.results | map(attribute='download_status.elements') | list | flatten | selectattr('downloadStatus', 'equalto', 'IN_PROGRESS') | list | length }}"
+          scheduled: "{{ release_status_results.results | map(attribute='download_status.elements') | list | flatten | selectattr('downloadStatus', 'equalto', 'SCHEDULED') | list | length }}"
+          validating: "{{ release_status_results.results | map(attribute='download_status.elements') | list | flatten | selectattr('downloadStatus', 'equalto', 'VALIDATING') | list | length }}"
+          failed: "{{ release_status_results.results | map(attribute='download_status.elements') | list | flatten | selectattr('downloadStatus', 'equalto', 'FAILED') | list | length }}"
+
+    - name: Initialize Bundle Add List
+      ansible.builtin.set_fact:
+        bundles_to_add: []
+
+    - name: Build Bundle Add List
+      ansible.builtin.set_fact:
+        bundles_to_add: "{{ bundles_to_add + new_bundles }}"
+      vars:
+        release_cfg: "{{ item.item }}"
+        all_elements: "{{ item.download_status.elements | default([]) }}"
+        api_components: >-
+          {{ (release_cfg.components | default([])
+              | map('extract', _component_api_map)
+              | select('defined') | list)
+             + (release_cfg.components | default([])
+                | reject('in', _component_api_map)
+                | list) }}
+        type_filtered: >-
+          {{ all_elements
+             if (release_cfg.download_all | default(true)) | bool
+             else all_elements | selectattr('componentType', 'in', api_components) | list }}
+        new_bundles: >-
+          {{ type_filtered
+             | rejectattr('downloadStatus', 'equalto', 'SUCCESSFUL')
+             | rejectattr('downloadStatus', 'equalto', 'SUCCESS')
+             | rejectattr('downloadStatus', 'equalto', 'IN_PROGRESS')
+             | rejectattr('downloadStatus', 'equalto', 'SCHEDULED')
+             | rejectattr('downloadStatus', 'equalto', 'VALIDATING')
+             | list }}
+      loop: "{{ release_status_results.results }}"
+      loop_control:
+        label: "release={{ release_cfg.release_version }}"
+
+    - name: Nothing to Add
+      ansible.builtin.debug:
+        msg: "Nothing to add: total={{ bundle_status_counts.total }}, successful={{ bundle_status_counts.successful }}, pending={{ bundle_status_counts.pending }}, in_progress={{ bundle_status_counts.in_progress }}, scheduled={{ bundle_status_counts.scheduled }}, validating={{ bundle_status_counts.validating }}, failed={{ bundle_status_counts.failed }}"
+      when: bundles_to_add | length == 0
+
+    - name: Bundles to Add
+      ansible.builtin.debug:
+        msg: "Bundles selected for addition={{ bundles_to_add | length }} (release total={{ bundle_status_counts.total }})"
+      when: bundles_to_add | length > 0
+
+    - name: Bundles Selected Details
+      ansible.builtin.debug:
+        msg: "{{ _component_name_map[item.componentType] | default(item.componentType | lower) }} {{ item.version | default('unknown-version') }}: bundle_id={{ item.bundleId }}"
+      loop: "{{ bundles_to_add }}"
+      loop_control:
+        label: "{{ item.bundleId }}"
+      when: bundles_to_add | length > 0
+
+    - name: Add Bundles
+      broadcom.vcf.vcf_installer_bundle:
+        vcf_installer_hostname: "{{ all_iac_vars.vcf_installer.hostname }}"
+        vcf_installer_user: "{{ all_iac_vars.vcf_installer.username | default('admin@local') }}"
+        vcf_installer_password: "{{ vcf_installer_password | default(all_iac_vars.vcf_installer.password) }}"
+        state: present
+        bundle_id: "{{ item.bundleId }}"
+        wait_for_completion: "{{ all_iac_vars.bundle.download_options.wait_for_completion | default(false) }}"
+        timeout: "{{ all_iac_vars.bundle.download_options.timeout | default(7200) }}"
+      loop: "{{ bundles_to_add }}"
+      loop_control:
+        label: "{{ item.bundleId }} ({{ _component_name_map[item.componentType] | default(item.componentType | lower) }} {{ item.version | default('unknown-version') }})"
+      register: download_results
+      when: bundles_to_add | length > 0
+
+    - name: Display Add Summary
+      ansible.builtin.debug:
+        msg: "Bundle addition summary: processed={{ download_results.results | default([]) | selectattr('changed', 'equalto', true) | list | length }}, skipped={{ download_results.results | default([]) | rejectattr('changed', 'equalto', true) | list | length }}"
+      when: bundles_to_add | length > 0

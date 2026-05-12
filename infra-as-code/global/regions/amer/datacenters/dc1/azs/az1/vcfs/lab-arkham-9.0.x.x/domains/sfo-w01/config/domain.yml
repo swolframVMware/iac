@@ -1,0 +1,20 @@
+---
+# ----------------------------------------------------------------------------------- #
+# Workload Domain Configuration
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This file contains the instance configuration for the VMware Cloud Foundation
+#   instance.
+#
+# Options:
+#   name: Name of the workload domain.
+#   enable_custom_certificates: Enable custom certificates for the instance (default: false).
+#   custom_certificates: Configuration for custom certificates (optional).
+#     - root_ca_certs: List of root CA certificate configurations.
+#       - alias: Alias for the certificate.
+#       - cert_chain: List of certificate chain entries.
+#         - Certificate data in PEM format.
+# ----------------------------------------------------------------------------------- #
+
+domain:
+  name: sfo-w01

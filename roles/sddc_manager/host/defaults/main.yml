@@ -1,0 +1,11 @@
+---
+# Default desired state of the host(s) managed by this role.
+
+# Valid values: present, absent
+host_state: present
+
+# Template name for commission host payload.
+host_commission_template_name: "commission_hosts.j2"
+
+# Template name for decommission host payload.
+host_decommission_template_name: "decommission_hosts.j2"

@@ -1,0 +1,80 @@
+---
+# Copyright (c) Broadcom. All Rights Reserved.
+# The term "Broadcom" refers solely to the Broadcom Inc. corporate affiliate that
+# distributes this software.
+#
+# You are hereby granted a non-exclusive, worldwide, royalty-free license under
+# Broadcom's copyrights to use, copy, modify, and distribute this software in source
+# code or binary form for use in connection with Broadcom products.
+#
+# This copyright notice shall be included in all copies or substantial portions of the
+# software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+# PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+# CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+# OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+# ----------------------------------------------------------------------------------- #
+# Role: sddc_manager.host
+# Task: Commission Host(s)
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This task is responsible for commissioning hosts in a VMware Cloud Foundation
+#   instance.
+# ----------------------------------------------------------------------------------- #
+
+- name: Commission Hosts
+  broadcom.vcf.sddc_manager_host:
+    sddc_manager_hostname: "{{ all_iac_vars.sddc_manager.hostname }}"
+    sddc_manager_user: "{{ all_iac_vars.vsphere.vcenter.sso.username }}"
+    sddc_manager_password: "{{ vcenter_administrator_password | default(all_iac_vars.vsphere.vcenter.sso.password) }}"
+    hosts_payload: "{{ api_payload_json }}"
+    state: present
+    validate: false
+  register: result
+
+- name: Display Commission Status
+  ansible.builtin.debug:
+    msg: "{{ result.msg }}"
+
+- name: Set Host Commission Task ID
+  ansible.builtin.set_fact:
+    commission_hosts_id: "{{ result.meta.id }}"
+  when:
+    - not ansible_check_mode
+    - result.meta is defined
+    - result.meta.id is defined
+
+- name: Get Status of Host Commission
+  broadcom.vcf.sddc_manager_tasks_status:
+    sddc_manager_hostname: "{{ all_iac_vars.sddc_manager.hostname }}"
+    sddc_manager_user: "{{ all_iac_vars.vsphere.vcenter.sso.username }}"
+    sddc_manager_password: "{{ vcenter_administrator_password | default(all_iac_vars.vsphere.vcenter.sso.password) }}"
+    task_id: "{{ commission_hosts_id }}"
+    sddc_manager_task_type: hosts
+    validation: false
+    retries: 60
+    delay: 10
+  register: task_result
+  when:
+    - not ansible_check_mode
+    - commission_hosts_id is defined
+
+- name: Check for Errors in the Result
+  ansible.builtin.fail:
+    msg: "Failed to commission hosts. Error codes: {{ task_result.meta.error_codes }}"
+  when:
+    - not ansible_check_mode
+    - task_result is defined
+    - task_result.meta is defined
+    - task_result.meta.error_codes is defined
+
+- name: Display Final Status
+  ansible.builtin.debug:
+    msg: "{{ task_result.msg }}"
+  when:
+    - not ansible_check_mode
+    - task_result is defined
+    - task_result.msg is defined

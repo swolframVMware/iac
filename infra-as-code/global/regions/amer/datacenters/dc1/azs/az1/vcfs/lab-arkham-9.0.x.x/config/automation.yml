@@ -1,0 +1,18 @@
+# ----------------------------------------------------------------------------------- #
+# VCF Automation Configuration
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This file contains the instance-level configuration for the VMware Cloud
+#   Foundation instance.
+# ----------------------------------------------------------------------------------- #
+
+automation:
+  hostname: flt-auto01.rainpole.io
+  admin_password: "{{ vault_automation_admin_password }}"
+  node_ips:
+    - 10.11.10.46
+    - 10.11.10.47
+    - 10.11.10.48
+    - 10.11.10.49
+  node_prefix: flt-auto01
+  internal_cluster_cidr: 240.0.0.0/15

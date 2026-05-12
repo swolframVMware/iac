@@ -1,0 +1,5 @@
+---
+# Default desired state of CEIP managed by this role.
+
+# Valid values: enabled, disabled
+ceip_state: disabled

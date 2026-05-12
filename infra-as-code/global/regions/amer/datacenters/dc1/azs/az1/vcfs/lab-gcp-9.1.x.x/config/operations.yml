@@ -1,0 +1,23 @@
+---
+# ----------------------------------------------------------------------------------- #
+# VCF Operations Configuration
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This file contains the instance-level configuration for the VMware Cloud
+#   Foundation instance.
+# ----------------------------------------------------------------------------------- #
+
+operations:
+  load_balancer_fqdn: voplb-dc1.corp.internal
+  admin_password: "{{ vault_operations_admin_password }}"
+  root_password: "{{ vault_operations_root_password }}"
+  nodes:
+    - hostname: vop1-dc1.corp.internal
+      type: master
+    - hostname: vop2-dc1.corp.internal
+      type: replica
+    - hostname: vop3-dc1.corp.internal
+      type: data
+  collector:
+    hostname: vop-c1-dc1-az1-mg.corp.internal
+    root_password: "{{ vault_collector_root_password }}"

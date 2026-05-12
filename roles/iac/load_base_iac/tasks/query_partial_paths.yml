@@ -1,0 +1,69 @@
+---
+# Inputs:
+#   - working_dir: Base directory for IaC files.
+#   - generated_path: Path pattern with wildcards to match against.
+
+- name: Find All Directories in Working Directory
+  ansible.builtin.find:
+    paths: "{{ working_dir }}"
+    file_type: directory
+    recurse: yes
+    excludes:
+      - config
+      - defaults
+  register: find_matches
+  no_log: true
+
+- name: Filter Directories Matching Generated Path Pattern
+  ansible.builtin.set_fact:
+    find_paths: "{{ find_matches.files | selectattr('path', 'search', find_pattern) | map(attribute='path') | list }}"
+  vars:
+    find_pattern: "{{ generated_path }}"
+  no_log: true
+
+# - broadcom.vcf.redact_debug:
+#     var: find_paths
+
+- name: Warn About Multiple Matching Directories
+  ansible.builtin.debug:
+    msg: "WARNING: Multiple IaC directories matched '{{ generated_path }}'. Using the first match..."
+  when: find_paths | length > 1
+
+- block:
+  - name: Extract All Directory Paths
+    ansible.builtin.set_fact:
+      path_list: "{{ find_matches.files | json_query(jq) }}"
+    vars:
+      jq: "[*].path"
+    no_log: true
+
+  # - broadcom.vcf.redact_debug:
+  #     var: path_list
+
+  - name: Fail When No Matching Directory Found
+    ansible.builtin.fail:
+      msg: "Unable to find matching IaC directory for '{{ generated_path }}'. Aborting..."
+
+  when: find_paths | length == 0
+
+- name: Extract Working Directory Separator
+  ansible.builtin.set_fact:
+    last_working_dir: "{{ working_dir.split('/')[-2] }}"
+  no_log: true
+
+- name: Split Path Using Working Directory Separator
+  ansible.builtin.set_fact:
+    new_path_list: "{{ find_paths[0].split(separator) }}"
+  vars:
+    separator: "{{ last_working_dir }}/"
+  no_log: true
+
+- name: Validate IaC Path Structure
+  ansible.builtin.fail:
+    msg: "Invalid IaC path structure. The IaC pattern and working directory format is incorrect, or '{{ last_working_dir }}' appears multiple times in the path. Aborting..."
+  when: new_path_list | length != 2
+
+- name: Update Generated Path to Matched Directory
+  ansible.builtin.set_fact:
+    generated_path: "{{ new_path_list[1] }}"
+  no_log: true

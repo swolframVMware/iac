@@ -1,0 +1,11 @@
+---
+# ----------------------------------------------------------------------------------- #
+# Default SDDC Manager Configuration
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This file contains the default configuration settings for SDDC Manager in a
+#   VMware Cloud Foundation deployment.
+# ----------------------------------------------------------------------------------- #
+
+sddc_manager:
+  use_existing_deployment: false

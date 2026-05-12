@@ -1,0 +1,26 @@
+---
+# ----------------------------------------------------------------------------------- #
+# VCF Management Services Configuration
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This file contains the instance-level configuration for the VMware Cloud
+#   Foundation instance.
+#
+# Required Configuration:
+#   - instance_hostname:         FQDN of VCF Management Services for the instance.
+#   - fleet_hostname:            FQDN of VCF Management Services for the fleet.
+#   - management.hostname:       FQDN of VCF Management Services for management.
+#   - internal_cluster_cidr:     CIDR for the internal cluster.
+#   - node_ips.start_ip_address: Start IP address for the node IPs.
+#   - node_ips.end_ip_address:   End IP address for the node IPs.
+# ----------------------------------------------------------------------------------- #
+
+management:
+  instance_hostname: vsp-instance-dc1.corp.internal
+  fleet_hostname: vsp-fleet-dc1.corp.internal
+  services_runtime_hostname: vsp-mg-dc1.corp.internal
+  internal_cluster_cidr: 198.18.0.0/15
+  node_ips:
+    start_ip_address: 172.16.10.161
+    end_ip_address: 172.16.10.190
+  password: "{{ vault_management_password }}"

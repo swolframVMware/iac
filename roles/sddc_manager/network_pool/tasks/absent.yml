@@ -1,0 +1,38 @@
+---
+# Copyright (c) Broadcom. All Rights Reserved.
+# The term "Broadcom" refers solely to the Broadcom Inc. corporate affiliate that
+# distributes this software.
+#
+# You are hereby granted a non-exclusive, worldwide, royalty-free license under
+# Broadcom's copyrights to use, copy, modify, and distribute this software in source
+# code or binary form for use in connection with Broadcom products.
+#
+# This copyright notice shall be included in all copies or substantial portions of the
+# software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+# PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+# CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+# OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+# ----------------------------------------------------------------------------------- #
+# Role: sddc_manager.network_pool
+# Task: Ensure Network Pool is Absent
+# ----------------------------------------------------------------------------------- #
+# Description:
+# This task ensures that a specified network pool is removed from a VMware Cloud
+# Foundation instance.
+# ----------------------------------------------------------------------------------- #
+
+- name: Find Network Pool in IaC Configuration
+  ansible.builtin.set_fact:
+    network_pool_name: "{{ all_iac_vars.vsphere.datacenter.clusters[0].host_pool.name | default(none) }}"
+
+- name: Fail if Network Pool Not Found
+  ansible.builtin.fail:
+    msg: "Network pool name is not found in IaC configuration at vsphere.datacenter.clusters[*].host_pool"
+  when: network_pool_name is none
+
+- name: Remove Network Pool
+  ansible.builtin.include_tasks: remove_network_pool.yml

@@ -1,0 +1,12 @@
+---
+# Default settings for the role.
+
+# Default pattern for the content source.
+iac_pattern: "global/regions/<region>/datacenters/<datacenter>/azs/<az>/vcfs/<vcf>/domains/<domain>"
+
+# Defaults for content sourced from a file.
+iac_folder: infra-as-code
+
+# Defaults for content sourced from a git repository.
+iac_git_branch: main
+iac_git_clone_folder: infra-as-code-git

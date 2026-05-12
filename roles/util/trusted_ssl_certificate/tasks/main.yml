@@ -1,0 +1,125 @@
+---
+# Copyright (c) Broadcom. All Rights Reserved.
+# The term "Broadcom" refers solely to the Broadcom Inc. corporate affiliate that
+# distributes this software.
+#
+# You are hereby granted a non-exclusive, worldwide, royalty-free license under
+# Broadcom's copyrights to use, copy, modify, and distribute this software in source
+# code or binary form for use in connection with Broadcom products.
+#
+# This copyright notice shall be included in all copies or substantial portions of the
+# software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+# PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+# CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+# OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+# ----------------------------------------------------------------------------------- #
+# Role: util.trusted_ssl_certificate
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This role retrieves the SSL certificate from a target endpoint using OpenSSL
+#   and builds the trusted certificate JSON payload required by the
+#   Trusted Certificate API operations on both VCF Installer and SDDC Manager:
+# ----------------------------------------------------------------------------------- #
+# Input Variables:
+#   target_host:            (Required) The hostname or IP address of the target endpoint
+#                           from which the SSL certificate will be retrieved.
+#   target_port:            (Optional) The port number for the SSL connection.
+#                           Default: 443.
+#   certificate_usage_type: (Optional) The certificate usage type for the payload.
+#                           Valid values: TRUSTED_FOR_OUTBOUND.
+#                           Default: "TRUSTED_FOR_OUTBOUND".
+# ----------------------------------------------------------------------------------- #
+# Output Variables:
+#   trusted_certificate_payload: A dict containing the add_trusted_certificate request body:
+#     - certificate:           The PEM certificate string with subject and issuer header
+#                              lines, formatted with embedded newlines.
+#     - certificateUsageType:  The certificate usage type value.
+# ----------------------------------------------------------------------------------- #
+
+- name: Set Internal Variables
+  ansible.builtin.set_fact:
+    _target_host: "{{ target_host }}"
+    _target_port: "{{ target_port | default(443) }}"
+    _certificate_usage_type: "{{ certificate_usage_type | default('TRUSTED_FOR_OUTBOUND') }}"
+
+- name: Validate Target Host
+  ansible.builtin.assert:
+    that:
+      - _target_host is defined
+      - _target_host | length > 0
+    fail_msg: "target_host must be provided when calling this role"
+
+- name: Validate Target Port
+  ansible.builtin.assert:
+    that:
+      - _target_port | int > 0
+      - _target_port | int <= 65535
+    fail_msg: "target_port must be a valid port number (1-65535)"
+
+- name: Check SSL Port Accessibility
+  ansible.builtin.wait_for:
+    host: "{{ _target_host }}"
+    port: "{{ _target_port }}"
+    timeout: 10
+    state: started
+  ignore_errors: true
+  register: ssl_port_check
+
+- name: Validate SSL Port Accessibility
+  ansible.builtin.assert:
+    that:
+      - ssl_port_check is not failed
+    fail_msg: |
+      SSL port {{ _target_port }} is not accessible on {{ _target_host }}.
+
+      Possible causes:
+      - SSL/TLS service not available
+      - Firewall blocking port {{ _target_port }}
+      - Host is not reachable
+      - Network connectivity issues
+
+      Please verify:
+        ping {{ _target_host }}
+        nc -zv {{ _target_host }} {{ _target_port }}
+
+- name: Retrieve SSL Certificate Subject and Issuer
+  ansible.builtin.set_fact:
+    _cert_subject: "{{ lookup('pipe', 'echo | openssl s_client -connect ' + _target_host + ':' + (_target_port | string) + ' 2>/dev/null | openssl x509 -noout -subject | sed \"s/subject=//\"') }}"
+    _cert_issuer: "{{ lookup('pipe', 'echo | openssl s_client -connect ' + _target_host + ':' + (_target_port | string) + ' 2>/dev/null | openssl x509 -noout -issuer | sed \"s/issuer=//\"') }}"
+
+- name: Retrieve SSL Certificate PEM
+  ansible.builtin.set_fact:
+    _cert_pem: "{{ lookup('pipe', 'echo | openssl s_client -connect ' + _target_host + ':' + (_target_port | string) + ' 2>/dev/null | openssl x509') }}"
+
+- name: Validate Retrieved Certificate
+  ansible.builtin.assert:
+    that:
+      - _cert_pem | length > 0
+      - "'BEGIN CERTIFICATE' in _cert_pem"
+      - "'END CERTIFICATE' in _cert_pem"
+    fail_msg: |
+      Failed to retrieve a valid SSL certificate from {{ _target_host }}:{{ _target_port }}.
+      Retrieved value: '{{ _cert_pem }}'
+
+      This may indicate:
+      - No SSL/TLS certificate available
+      - SSL/TLS service configuration issue
+      - Self-signed certificate issue
+      - Network timeout
+
+      Try manual verification:
+        echo | openssl s_client -connect {{ _target_host }}:{{ _target_port }}
+
+- name: Build Certificate String
+  ansible.builtin.set_fact:
+    _cert_string: "subject={{ _cert_subject }}\nissuer={{ _cert_issuer }}\n{{ _cert_pem }}\n\n"
+
+- name: Set Trusted SSL Certificate Payload Fact
+  ansible.builtin.set_fact:
+    trusted_ssl_certificate_payload:
+      certificate: "{{ _cert_string }}"
+      certificateUsageType: "{{ _certificate_usage_type }}"

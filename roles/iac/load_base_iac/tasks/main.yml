@@ -1,0 +1,38 @@
+---
+# Inputs:
+#   - level_input: Specific hierarchy level to load (optional, defaults to all levels)
+#   - type_folder_input: Configuration folder name (optional, defaults to default_type_folder)
+
+- name: Generate Full Path from IaC Pattern
+  ansible.builtin.include_tasks: generate_full_path.yml
+
+- name: Initialize IaC Variables and Level
+  ansible.builtin.set_fact:
+    all_iac_vars: {}
+    level_specified: "{{ level_input | default(pattern_items | length) | int + 1}}"
+  no_log: true
+
+# - broadcom.vcf.redact_debug:
+#     var: level_specified
+
+- name: Load Configuration Variables for All Levels
+  ansible.builtin.include_tasks: read_one_level.yml
+  vars:
+    type_folder: "{{ type_folder_input | default(default_type_folder) }}"
+    load_default: yes
+  loop: "{{ range(1, level_specified | int) | list }}"
+  loop_control:
+    loop_var: level
+    label: "Loading level {{ level }}"
+  no_log: true
+
+# - broadcom.vcf.redact_debug:
+#    var: all_iac_vars
+
+- name: Display IaC Loading Summary
+  ansible.builtin.debug:
+    msg:
+      - "Successfully loaded IaC configuration."
+      - "Hierarchy levels: {{ level_specified | int - 1 }}"
+      - "Configuration keys: {{ all_iac_vars.keys() | list | length }}"
+  when: all_iac_vars is defined

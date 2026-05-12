@@ -1,0 +1,10 @@
+- name: "Check current SSH service status on {{ item.hostname }}"
+  ansible.builtin.uri:
+    url: "https://{{ item.hostname }}/api/v1/node/services/ssh/status"
+    method: GET
+    user: "admin"
+    password: "{{ nsx_admin_password }}"
+    force_basic_auth: yes
+    body_format: json
+    validate_certs: false
+  register: ssh_status

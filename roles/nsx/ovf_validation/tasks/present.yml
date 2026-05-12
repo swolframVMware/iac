@@ -1,0 +1,18 @@
+---
+- name: "Copy Enable OVF Validation Script to /tmp on {{ item.hostname }}"
+  ansible.builtin.copy:
+    src: "enable_ovf_validation_flag.sh"
+    dest: "/tmp/enable_ovf_validation_flag.sh"
+    mode: '0755'  # Makes the script executable
+  delegate_to: "{{ item.hostname }}"
+
+- name: "Enable OVF Validation on {{ item.hostname }}"
+  ansible.builtin.shell: "bash /tmp/enable_ovf_validation_flag.sh"
+  delegate_to: "{{ item.hostname }}"
+  register: ovf_validation_result
+  failed_when: "'FAILURE' in ovf_validation_result.stdout or 'ERROR' in ovf_validation_result.stdout"
+
+- name: "OVF Validation enabled on {{ item.hostname }}"
+  ansible.builtin.debug:
+    msg: "Successfully enabled OVF Validation on {{ item.hostname }}"
+  when: "'already set' in ovf_validation_result.stdout or 'SUCCESS' in ovf_validation_result.stdout"

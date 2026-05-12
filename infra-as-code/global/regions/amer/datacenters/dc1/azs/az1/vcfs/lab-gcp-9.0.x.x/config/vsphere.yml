@@ -1,0 +1,51 @@
+---
+# ----------------------------------------------------------------------------------- #
+# vSphere Configuration
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This file contains the instance-level configuration for the VMware Cloud
+#   Foundation instance.
+# ----------------------------------------------------------------------------------- #
+
+vsphere:
+  vcenter:
+    root_password: "{{ vault_vcenter_root_password }}"
+    sso:
+      password: "{{ vault_vcenter_administrator_password }}"
+  esx_root_password: "{{ vault_esx_host_password }}"
+  networking:
+    distributed_switches:
+      - name: vds01 # generic name! actual name constructed in jinja template
+        uplink_name: uplink-vds01 # generic name! actual name constructed in jinja template
+        mtu: 8900
+        teaming:
+          name: DEFAULT
+          policy: LOADBALANCE_SRCID
+        active_uplinks:
+          - uplink1
+          - uplink2
+        standby_uplinks: []
+        uplinks:
+          - id: uplink1
+            vmnic: vmnic0
+            nsx: uplink1
+          - id: uplink2
+            vmnic: vmnic1
+            nsx: uplink2
+      - name: vds02 # generic name! actual name constructed in jinja template
+        uplink_name: uplink-vds02 # generic name! actual name constructed in jinja template
+        mtu: 8900
+        teaming:
+          name: DEFAULT
+          policy: LOADBALANCE_SRCID
+        active_uplinks:
+          - uplink1
+          - uplink2
+        standby_uplinks: []
+        uplinks:
+          - id: uplink1
+            vmnic: vmnic2
+            nsx: uplink1
+          - id: uplink2
+            vmnic: vmnic3
+            nsx: uplink2

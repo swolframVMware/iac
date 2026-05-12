@@ -1,0 +1,60 @@
+---
+# Copyright (c) Broadcom. All Rights Reserved.
+# The term "Broadcom" refers solely to the Broadcom Inc. corporate affiliate that
+# distributes this software.
+#
+# You are hereby granted a non-exclusive, worldwide, royalty-free license under
+# Broadcom's copyrights to use, copy, modify, and distribute this software in source
+# code or binary form for use in connection with Broadcom products.
+#
+# This copyright notice shall be included in all copies or substantial portions of the
+# software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+# PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+# CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+# OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+# ----------------------------------------------------------------------------------- #
+# Role: sddc_manager.cluster_hosts
+# Task: Remove Hosts from Cluster
+# ----------------------------------------------------------------------------------- #
+
+- name: Remove Hosts from Cluster
+  broadcom.vcf.sddc_manager_cluster_hosts:
+    sddc_manager_hostname: "{{ all_iac_vars.sddc_manager.hostname }}"
+    sddc_manager_user: "{{ all_iac_vars.vsphere.vcenter.sso.username }}"
+    sddc_manager_password: "{{ vcenter_administrator_password | default(all_iac_vars.vsphere.vcenter.sso.password) }}"
+    state: absent
+    cluster_id: "{{ cluster_id }}"
+    cluster_payload: "{{ api_payload_json }}"
+  register: remove_result
+
+- name: Wait for Remove Hosts Task
+  broadcom.vcf.sddc_manager_tasks_status:
+    sddc_manager_hostname: "{{ all_iac_vars.sddc_manager.hostname }}"
+    sddc_manager_user: "{{ all_iac_vars.vsphere.vcenter.sso.username }}"
+    sddc_manager_password: "{{ vcenter_administrator_password | default(all_iac_vars.vsphere.vcenter.sso.password) }}"
+    task_id: "{{ remove_result.meta.id }}"
+    sddc_manager_task_type: clusters
+    validation: false
+    retries: 120
+    delay: 30
+  register: task_result
+  when:
+    - not ansible_check_mode
+    - remove_result.meta is defined
+    - remove_result.meta.id is defined
+
+- name: Check for Errors
+  ansible.builtin.fail:
+    msg: "Failed to remove hosts: {{ task_result.meta.error_codes }}"
+  when:
+    - not ansible_check_mode
+    - task_result.meta is defined
+    - task_result.meta.error_codes is defined
+
+- name: Display Remove Result
+  ansible.builtin.debug:
+    msg: "{{ remove_result.msg | default(remove_result.meta.message | default('Operation completed.')) }}"

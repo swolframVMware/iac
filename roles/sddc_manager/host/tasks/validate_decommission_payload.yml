@@ -1,0 +1,74 @@
+---
+# Copyright (c) Broadcom. All Rights Reserved.
+# The term "Broadcom" refers solely to the Broadcom Inc. corporate affiliate that
+# distributes this software.
+#
+# You are hereby granted a non-exclusive, worldwide, royalty-free license under
+# Broadcom's copyrights to use, copy, modify, and distribute this software in source
+# code or binary form for use in connection with Broadcom products.
+#
+# This copyright notice shall be included in all copies or substantial portions of the
+# software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+# PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+# CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+# OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+# ----------------------------------------------------------------------------------- #
+# Role: sddc_manager.host
+# Task: Validate Decommission Hosts Payload
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This task is responsible for validating the payload to decommission hosts in a
+#   VMware Cloud Foundation instance.
+# ----------------------------------------------------------------------------------- #
+
+- name: Validate Decommission Host Payload
+  broadcom.vcf.sddc_manager_host:
+    sddc_manager_hostname: "{{ all_iac_vars.sddc_manager.hostname }}"
+    sddc_manager_user: "{{ all_iac_vars.vsphere.vcenter.sso.username }}"
+    sddc_manager_password: "{{ vcenter_administrator_password | default(all_iac_vars.vsphere.vcenter.sso.password) }}"
+    hosts_payload: "{{ api_payload_json }}"
+    state: absent
+    validate: true
+  register: result
+
+- name: Display Validation Result
+  ansible.builtin.debug:
+    msg: "{{ result.msg }}"
+
+- name: Set Deommission Host Validation ID
+  ansible.builtin.set_fact:
+    decommission_hosts_validation_id: "{{ result.meta.id }}"
+  when:
+    - not ansible_check_mode
+    - result.meta is defined
+    - result.meta.id is defined
+    - result.meta.executionStatus is defined
+    - result.meta.executionStatus != 'COMPLETED'
+
+- name: Get Status of Decommission Host Validation
+  broadcom.vcf.sddc_manager_tasks_status:
+    sddc_manager_hostname: "{{ all_iac_vars.sddc_manager.hostname }}"
+    sddc_manager_user: "{{ all_iac_vars.vsphere.vcenter.sso.username }}"
+    sddc_manager_password: "{{ vcenter_administrator_password | default(all_iac_vars.vsphere.vcenter.sso.password) }}"
+    task_id: "{{ decommission_hosts_validation_id }}"
+    sddc_manager_task_type: hosts
+    validation: true
+    retries: 60
+    delay: 10
+  register: task_result
+  when:
+    - not ansible_check_mode
+    - decommission_hosts_validation_id is defined
+
+- name: Check for Errors in the Result
+  ansible.builtin.fail:
+    msg: "Failed to validate payload. Error codes: {{ task_result.meta.error_codes }}"
+  when:
+    - not ansible_check_mode
+    - task_result is defined
+    - task_result.meta is defined
+    - task_result.meta.error_codes is defined

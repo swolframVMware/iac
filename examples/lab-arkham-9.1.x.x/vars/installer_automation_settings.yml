@@ -1,0 +1,40 @@
+---
+# ----------------------------------------------------------------------------------- #
+# Example Template for Arkham Lab (Simulating Inputs from AAP Survey)
+# ----------------------------------------------------------------------------------- #
+
+# ----------------------------------------------------------------------------------- #
+# Obtain the infrastructure-as-code configuration from a Git repository.
+# ----------------------------------------------------------------------------------- #
+
+# Git Repository URL and Branch
+# iac_git_url: ssh://git@github-vcf.devops.broadcom.net/PSO/ansible-collection-vcf-iac-examples.git
+# iac_git_branch: main
+
+# ----------------------------------------------------------------------------------- #
+# Set the following variables to define the infrastructure-as-code search path.
+# ----------------------------------------------------------------------------------- #
+
+region: amer
+datacenter: dc1
+az: az1
+vcf: lab-arkham-9.1.x.x
+
+# ----------------------------------------------------------------------------------- #
+# Obtain the passwords from an encrypted Ansible Vault file.
+# ----------------------------------------------------------------------------------- #
+
+# Broadcom Support Portal
+depot_download_activation_code: "{{ vault_depot_download_activation_code }}"
+
+# Offline Depot
+depot_offline_password: "{{ vault_depot_offline_password }}"
+
+# Proxy Server
+proxy_password: "{{ vault_proxy_password }}"
+
+# VCF Installer
+# vcf_installer_ova_url_password: "{{ vault_vcf_installer_ova_url_password }}"
+vcf_installer_local_password: "{{ vault_vcf_installer_local_password }}"
+vcf_installer_root_password: "{{ vault_vcf_installer_root_password }}"
+vcf_installer_vsphere_password: "{{ vault_vcenter_administrator_password }}"

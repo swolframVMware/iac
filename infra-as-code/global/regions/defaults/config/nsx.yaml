@@ -1,0 +1,16 @@
+---
+# ----------------------------------------------------------------------------------- #
+# Default NSX Configuration
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This file contains the default configuration settings for NSX in a
+#   VMware Cloud Foundation deployment.
+#
+# Options:
+#   nsx.deployment.size: small, medium, large (Default: medium)
+#     Note: This is an override of the size defined in at the instance-level.
+# ----------------------------------------------------------------------------------- #
+
+nsx:
+  deployment:
+    use_existing_deployment: false

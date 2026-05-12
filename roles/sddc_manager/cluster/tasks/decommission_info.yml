@@ -1,0 +1,77 @@
+---
+# Copyright (c) Broadcom. All Rights Reserved.
+# The term "Broadcom" refers solely to the Broadcom Inc. corporate affiliate that
+# distributes this software.
+#
+# You are hereby granted a non-exclusive, worldwide, royalty-free license under
+# Broadcom's copyrights to use, copy, modify, and distribute this software in source
+# code or binary form for use in connection with Broadcom products.
+#
+# This copyright notice shall be included in all copies or substantial portions of the
+# software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+# PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+# CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+# OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+# ----------------------------------------------------------------------------------- #
+# Role: sddc_manager.cluster
+# Task: Collect Cluster Host Information for Decommissioning
+# ----------------------------------------------------------------------------------- #
+# Description:
+# This task collects host information from the cluster BEFORE it is removed,
+# so that hosts can be decommissioned after cluster removal.
+# ----------------------------------------------------------------------------------- #
+
+- name: Get Cluster Details
+  broadcom.vcf.sddc_manager_cluster_info:
+    sddc_manager_hostname: "{{ all_iac_vars.sddc_manager.hostname }}"
+    sddc_manager_user: "{{ all_iac_vars.vsphere.vcenter.sso.username }}"
+    sddc_manager_password: "{{ vcenter_administrator_password | default(all_iac_vars.vsphere.vcenter.sso.password) }}"
+    cluster_name: "{{ cluster_input }}"
+  register: cluster_details_result
+  failed_when: false
+
+- name: Build Host ID List from Cluster
+  ansible.builtin.set_fact:
+    host_ids_to_decommission: >-
+      {{
+        cluster_details_result.cluster.hosts | default([])
+        | map(attribute='id')
+        | list
+      }}
+  when:
+    - cluster_details_result.cluster is defined
+    - cluster_details_result.cluster.hosts is defined
+
+- name: Get All Hosts
+  broadcom.vcf.sddc_manager_host_info:
+    sddc_manager_hostname: "{{ all_iac_vars.sddc_manager.hostname }}"
+    sddc_manager_user: "{{ all_iac_vars.vsphere.vcenter.sso.username }}"
+    sddc_manager_password: "{{ vcenter_administrator_password | default(all_iac_vars.vsphere.vcenter.sso.password) }}"
+  register: cluster_hosts_result
+  when:
+    - host_ids_to_decommission is defined
+    - host_ids_to_decommission | length > 0
+
+- name: Build Host Decommission List for Cluster
+  ansible.builtin.set_fact:
+    hosts_to_decommission: >-
+      {{
+        cluster_hosts_result.meta.values() | list
+        | selectattr('id', 'in', host_ids_to_decommission)
+        | map(attribute='fqdn')
+        | list
+      }}
+  when:
+    - cluster_hosts_result is defined
+    - cluster_hosts_result.meta is defined
+    - host_ids_to_decommission is defined
+
+- name: Display Hosts to Decommission
+  ansible.builtin.debug:
+    msg: "Collected {{ hosts_to_decommission | default([]) | length }} hosts for decommissioning from cluster '{{ cluster_input }}': {{ hosts_to_decommission | default([]) | join(', ') }}."
+  when:
+    - hosts_to_decommission is defined

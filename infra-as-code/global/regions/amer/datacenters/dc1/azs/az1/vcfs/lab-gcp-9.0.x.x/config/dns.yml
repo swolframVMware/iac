@@ -1,0 +1,13 @@
+---
+# ----------------------------------------------------------------------------------- #
+# DNS Configuration
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This file contains the instance-level configuration for the VMware Cloud
+#   Foundation instance.
+# ----------------------------------------------------------------------------------- #
+
+dns:
+  domain_name: corp.internal
+  servers:
+    - 192.168.0.253

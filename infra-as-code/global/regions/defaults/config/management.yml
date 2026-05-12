@@ -1,0 +1,15 @@
+---
+# ----------------------------------------------------------------------------------- #
+# Default VCF Management Services Configuration
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This file contains the default configuration settings for the VCF Management
+#   Services in a VMware Cloud Foundation deployment.
+#
+# Options:
+#   management.size: large, medium, small (Default: medium)
+#     Note: This is an override of the size defined in at the instance-level.
+# ----------------------------------------------------------------------------------- #
+
+management:
+  use_existing_deployment: false

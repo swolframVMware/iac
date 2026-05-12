@@ -1,0 +1,87 @@
+---
+# Inputs:
+#   - type_folder: Configuration folder name to load.
+#   - gen_path_list: Generated path components as a list.
+#   - dir_depth: Directory traversal depth. (default: 1)
+#   - always_load_default_config: Override to always load default config folder instead of type_folder. (default: false)
+
+- name: Initialize Configuration Loading for Level {{ level }}
+  ansible.builtin.set_fact:
+    level_path: "{{ gen_path_list[:level * 2 + 1] | join('/') }}"
+    level_default_path: "{{ gen_path_list[:level * 2] | join('/') }}"
+    depth1: "{{ dir_depth | default('1') | int }}"
+  no_log: true
+
+- block:
+  - name: Use Standard Configuration Path
+    ansible.builtin.set_fact:
+      type_folder_used: "{{ type_folder }}"
+    no_log: true
+
+  - name: Use Default Configuration Path
+    ansible.builtin.set_fact:
+      type_folder_used: "{{ default_type_folder }}"
+    when: always_load_default_config
+    no_log: true
+
+  - name: Check for Default Configuration
+    ansible.builtin.stat:
+      path: "{{ working_dir }}{{ level_default_path }}/defaults/{{ type_folder_used }}"
+    register: default_config_dir_check
+    delegate_to: localhost
+    no_log: true
+
+  - name: Load Default Configuration from {{ level_default_path }}/defaults/{{ type_folder_used }}
+    ansible.builtin.include_vars:
+      dir: "{{ working_dir }}{{ level_default_path }}/defaults/{{ type_folder_used }}"
+      name: load_vars
+      ignore_unknown_extensions: yes
+      depth: 1
+    when:
+      - default_config_dir_check.stat.exists
+      - default_config_dir_check.stat.isdir
+    no_log: true
+
+  # - broadcom.vcf.redact_debug:
+  #    var: load_vars
+
+  - name: Merge Default Configuration for Level {{ level }}
+    ansible.builtin.set_fact:
+      all_iac_vars: "{{ all_iac_vars | combine(load_vars, recursive=True) }}"
+    when: load_vars is defined
+    no_log: true
+
+  ignore_errors: yes
+  no_log: true
+  when: load_default
+
+- block:
+  - name: Check for Level-specific Configuration
+    ansible.builtin.stat:
+      path: "{{ working_dir }}{{ level_path }}/{{ type_folder }}"
+    register: level_path_dir_check
+    delegate_to: localhost
+    no_log: true
+
+  - name: Load Level-specific Configuration from {{ level_path }}/{{ type_folder }}
+    ansible.builtin.include_vars:
+      dir: "{{ working_dir }}{{ level_path }}/{{ type_folder }}"
+      name: load_vars
+      ignore_unknown_extensions: yes
+      depth: 1
+    when:
+      - level_path_dir_check.stat.exists
+      - level_path_dir_check.stat.isdir
+    no_log: true
+
+  # - broadcom.vcf.redact_debug:
+  #    var: load_vars
+
+  - name: Merge Level-specific Configuration for Level {{ level }}
+    ansible.builtin.set_fact:
+      all_iac_vars: "{{ all_iac_vars | combine(load_vars, recursive=True) }}"
+    when: load_vars is defined
+    no_log: true
+
+  ignore_errors: yes
+  no_log: true

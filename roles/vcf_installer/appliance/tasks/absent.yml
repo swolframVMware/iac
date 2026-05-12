@@ -1,0 +1,45 @@
+---
+# Copyright (c) Broadcom. All Rights Reserved.
+# The term "Broadcom" refers solely to the Broadcom Inc. corporate affiliate that
+# distributes this software.
+#
+# You are hereby granted a non-exclusive, worldwide, royalty-free license under
+# Broadcom's copyrights to use, copy, modify, and distribute this software in source
+# code or binary form for use in connection with Broadcom products.
+#
+# This copyright notice shall be included in all copies or substantial portions of the
+# software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+# PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+# CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+# OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+# ----------------------------------------------------------------------------------- #
+# Role: vcf_installer.appliance
+# Task: Remove a VCF Installer Appliance
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This task removes the VCF Installer Appliance from an environment.
+# ----------------------------------------------------------------------------------- #
+
+- name: Remove VCF Installer Appliance
+  broadcom.vcf.vcf_installer_appliance:
+    hostname: "{{ all_iac_vars.vcf_installer.deployment.hostname }}"
+    username: "{{ all_iac_vars.vcf_installer.deployment.username }}"
+    password: "{{ vsphere_password | default(all_iac_vars.vcf_installer.deployment.password) }}"
+    port: "{{ all_iac_vars.vcf_installer.deployment.port | default(443) }}"
+    validate_certs: "{{ all_iac_vars.vcf_installer.deployment.validate_certs | default(false) }}"
+    name: "{{ all_iac_vars.vcf_installer.vm_name }}"
+    datacenter: "{{ all_iac_vars.vcf_installer.deployment.datacenter }}"
+    force: true
+    state: absent
+  register: appliance_removal_result
+  delegate_to: localhost
+
+- name: Display VCF Installer Appliance Removal Result
+  ansible.builtin.debug:
+    msg: "{{ appliance_removal_result.msg }}"
+  when:
+    - appliance_removal_result is defined

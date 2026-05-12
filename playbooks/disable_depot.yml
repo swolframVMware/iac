@@ -1,0 +1,66 @@
+---
+# Copyright (c) Broadcom. All Rights Reserved.
+# The term "Broadcom" refers solely to the Broadcom Inc. corporate affiliate that
+# distributes this software.
+#
+# You are hereby granted a non-exclusive, worldwide, royalty-free license under
+# Broadcom's copyrights to use, copy, modify, and distribute this software in source
+# code or binary form for use in connection with Broadcom products.
+#
+# This copyright notice shall be included in all copies or substantial portions of the
+# software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+# PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+# CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+# OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+# ----------------------------------------------------------------------------------- #
+# Playbook: Disable Depot
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This playbook disables the depot configuration from a VMware Cloud Foundation
+#   instance. This will disconnect from both online and offline depot sources.
+#
+#   The role automatically sets depot_state to 'absent' when depot.type is 'disabled'.
+#
+# Variables:
+#   All variables can be provided using command-line inputs or a vars file:
+#
+#   Required for IaC Configuration Loading:
+#   - region     : Region identifier (e.g., 'amer', 'emea', 'apac')
+#   - datacenter : Datacenter identifier (e.g., 'dc01', 'dc02')
+#   - az         : Availability zone identifier (e.g., 'az01', 'az02')
+#   - vcf        : VCF instance identifier (e.g., 'lab', 'prod')
+#   - domain     : VCF domain identifier (e.g., 'm01', 'w01')
+#
+#   Depot Configuration:
+#   Ensure depot.type is set to 'disabled' in config/depot.yml
+#   This will automatically set depot_state to 'absent' in the role.
+#
+# Usage Examples:
+#   # Using a vars file:
+#   ansible-playbook playbooks/disable_depot.yml \
+#     -e @examples/lab/vars/mgmt_automation_settings.yml
+#
+#   # Using inline variables:
+#   ansible-playbook playbooks/disable_depot.yml \
+#     -e "region=amer datacenter=dc01 az=az01 vcf=lab domain=m01"
+#
+# ----------------------------------------------------------------------------------- #
+
+- name: Disable Depot Configuration
+  hosts: localhost
+  gather_facts: true
+  environment:
+    no_proxy: "*"
+
+  tasks:
+    - name: Get IaC Settings
+      ansible.builtin.include_role:
+        name: broadcom.vcf.iac.get_settings
+
+    - name: Disable Depot Configuration
+      ansible.builtin.include_role:
+        name: broadcom.vcf.sddc_manager.depot

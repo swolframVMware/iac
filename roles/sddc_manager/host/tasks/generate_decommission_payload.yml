@@ -1,0 +1,78 @@
+---
+# Copyright (c) Broadcom. All Rights Reserved.
+# The term "Broadcom" refers solely to the Broadcom Inc. corporate affiliate that
+# distributes this software.
+#
+# You are hereby granted a non-exclusive, worldwide, royalty-free license under
+# Broadcom's copyrights to use, copy, modify, and distribute this software in source
+# code or binary form for use in connection with Broadcom products.
+#
+# This copyright notice shall be included in all copies or substantial portions of the
+# software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+# PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+# CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+# OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+# ----------------------------------------------------------------------------------- #
+# Role: sddc_manager.host
+# Task: Generate Decommission Hosts Payload
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This task is responsible for generating the payload to decommission hosts in a
+#   VMware Cloud Foundation instance.
+# ----------------------------------------------------------------------------------- #
+
+- name: Fail if No Host Specified
+  ansible.builtin.fail:
+    msg: >-
+      No hosts specified for decommission. 
+      Provide either 'hosts_input' as a list of FQDNs, 
+      or 'cluster_input' to decommission hosts from a cluster configuration.
+  when:
+    - hosts_input is not defined or hosts_input | length == 0
+    - cluster_input is not defined
+
+- name: Validate Host Against IaC Configuration
+  block:
+    - name: Get Cluster Configuration
+      ansible.builtin.set_fact:
+        cluster_config: "{{ all_iac_vars.vsphere.datacenter.clusters | selectattr('name', 'equalto', cluster_input) | first }}"
+
+    - name: Fail if Cluster Not Found
+      ansible.builtin.fail:
+        msg: "Cluster '{{ cluster_input }}' not found in IaC configuration."
+      when: cluster_config is not defined
+
+    - name: Get Defined Hostnames in Cluster
+      ansible.builtin.set_fact:
+        defined_hostnames: "{{ cluster_config.esx_hosts | map(attribute='hostname') | list }}"
+
+    - name: Validate Specified Host Exist in Cluster
+      block:
+        - name: Check for Undefined Hosts
+          ansible.builtin.set_fact:
+            undefined_hosts: "{{ hosts_input | difference(defined_hostnames) }}"
+
+        - name: Fail if Host Not Found in Cluster Configuration
+          ansible.builtin.fail:
+            msg: >-
+              The following hosts are not defined in cluster '{{ cluster_input }}':
+              {{ undefined_hosts | join(', ') }}.
+              Ensure hosts are defined in vsphere.datacenter.clusters[].esx_hosts.
+          when: undefined_hosts | length > 0
+      when: hosts_input is defined and hosts_input | length > 0
+
+    - name: Use All Cluster Hosts if None Specified
+      ansible.builtin.set_fact:
+        hosts_input: "{{ defined_hostnames }}"
+      when: hosts_input is not defined or hosts_input | length == 0
+  when: cluster_input is defined
+
+- name: Generate Decommission Hosts Payload
+  ansible.builtin.include_role:
+    name: broadcom.vcf.iac.generate_api_payload
+  vars:
+    template_name: "{{ host_decommission_template_name }}"

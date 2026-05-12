@@ -1,0 +1,8 @@
+clusterCompactionSpec:
+  hosts:
+{% set hosts_to_process = hosts_ready_to_remove | default(hosts_input | default([])) %}
+{% if hosts_to_process | length > 0 %}
+{% for host_fqdn in hosts_to_process %}
+    - id: {{ hosts_to_remove_ids[host_fqdn].id }}
+{% endfor %}
+{% endif %}

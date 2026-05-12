@@ -1,0 +1,92 @@
+---
+# Copyright (c) Broadcom. All Rights Reserved.
+# The term "Broadcom" refers solely to the Broadcom Inc. corporate affiliate that
+# distributes this software.
+#
+# You are hereby granted a non-exclusive, worldwide, royalty-free license under
+# Broadcom's copyrights to use, copy, modify, and distribute this software in source
+# code or binary form for use in connection with Broadcom products.
+#
+# This copyright notice shall be included in all copies or substantial portions of the
+# software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+# PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+# CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+# OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+# ----------------------------------------------------------------------------------- #
+# Role: ops.ssh_ecdsa_fingerprint
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This role retrieves the SSH ECDSA fingerprint from a target endpoint using the
+#   Ansible built-in lookup plugin. It validates the target host accessibility and
+#   the retrieved fingerprint format.
+# ----------------------------------------------------------------------------------- #
+# Input Variables:
+#   target_host: (Required) The hostname or IP address of the target endpoint.
+# ----------------------------------------------------------------------------------- #
+# Output Variables:
+#   ssh_ecdsa_fingerprint: The SSH ECDSA fingerprint in SHA256 format.
+# ----------------------------------------------------------------------------------- #
+
+- name: Set Internal Variables
+  ansible.builtin.set_fact:
+    _target_host: "{{ target_host }}"
+
+- name: Validate Target Host
+  ansible.builtin.assert:
+    that:
+      - _target_host is defined
+      - _target_host | length > 0
+    fail_msg: "target_host must be provided when calling this role"
+
+- name: Check SSH Port Accessibility
+  ansible.builtin.wait_for:
+    host: "{{ _target_host }}"
+    port: 22
+    timeout: 10
+    state: started
+  ignore_errors: true
+  register: ssh_port_check
+
+- name: Validate SSH Port Accessibility
+  ansible.builtin.assert:
+    that:
+      - ssh_port_check is not failed
+    fail_msg: |
+      SSH port 22 is not accessible on {{ _target_host }}.
+      
+      Possible causes:
+      - SSH service not available
+      - Firewall blocking port 22
+      - Host is not reachable
+      - Network connectivity issues
+      
+      Please verify:
+        ping {{ _target_host }}
+        nc -zv {{ _target_host }} 22
+
+- name: Get SSH ECDSA Fingerprint
+  ansible.builtin.set_fact:
+    _retrieved_fingerprint: "{{ lookup('pipe', 'ssh-keyscan -t ecdsa ' + _target_host + ' 2>/dev/null | ssh-keygen -lf - -E sha256') | regex_search('SHA256:[A-Za-z0-9+/]+') }}"
+
+- name: Validate Fingerprint Format
+  ansible.builtin.assert:
+    that:
+      - _retrieved_fingerprint | length > 0
+      - _retrieved_fingerprint is match('^SHA256:')
+    fail_msg: |
+      Failed to retrieve valid SSH ECDSA fingerprint from {{ _target_host }}.
+      Retrieved value: '{{ _retrieved_fingerprint }}'
+      
+      This may indicate:
+      - No ECDSA host key available
+      - SSH service configuration issue
+      - Network timeout
+      - Command output format issue
+
+- name: Set Fingerprint Fact
+  ansible.builtin.set_fact:
+    ssh_ecdsa_fingerprint: "{{ _retrieved_fingerprint }}"

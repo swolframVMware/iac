@@ -1,0 +1,87 @@
+---
+# ----------------------------------------------------------------------------------- #
+# vSphere Configuration
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This file contains the domain-level configuration for the VMware Cloud Foundation
+#   instance.
+# ----------------------------------------------------------------------------------- #
+
+vsphere:
+  vcenter:
+    hostname: sfo-w01-vc01.sfo.rainpole.io
+    subnet_mask: 255.255.255.0
+    gateway: 10.11.10.1
+  datacenter:
+    name: sfo-w01-dc01
+    clusters:
+      - name: sfo-w01-cl01
+        evc_mode: ''
+        high_availability: true
+        host_pool:
+          name: sfo-w01-r01-network-pool-01
+          networks:
+            - VSAN
+            - VMOTION
+        mgmt_port_groups:
+          MANAGEMENT:
+            name: sfo-w01-cl01-vds01-pg-esx-mgmt
+            vds_name: vds01
+            type: mgmt
+            teaming_policy: loadbalance_loadbased
+            active_uplinks:
+              - uplink1
+              - uplink2
+            standby_uplinks: []
+            vlan: 1311
+            mtu: 1500
+            subnet: 10.13.11.0
+            gateway: 10.13.11.1
+            subnetMask: null
+          VMOTION:
+            name: sfo-w01-cl01-vds01-pg-vmotion
+            vds_name: vds01
+            type: vmotion
+            teaming_policy: loadbalance_loadbased
+            active_uplinks:
+              - uplink1
+              - uplink2
+            standby_uplinks: []
+            vlan: 1312
+            mtu: 8900
+            subnet: 10.13.12.0
+            gateway: 10.13.12.1
+            subnetMask: 255.255.255.0
+            inclusion_range:
+              - start_ip_address: 10.13.12.101
+                end_ip_address: 10.13.12.116
+          VSAN:
+            name: sfo-w01-cl01-vds01-pg-vsan
+            vds_name: vds01
+            type: vsan
+            teaming_policy: loadbalance_loadbased
+            active_uplinks:
+              - uplink1
+              - uplink2
+            standby_uplinks: []
+            vlan: 1313
+            mtu: 8900
+            subnet: 10.13.13.0
+            gateway: 10.13.13.1
+            subnetMask: 255.255.255.0
+            inclusion_range:
+              - start_ip_address: 10.13.13.101
+                end_ip_address: 10.13.13.116
+        storage:
+          vsan:
+            datastore_name: sfo-w01-sfo-w01-cl01-vsan01
+            vsan_type: esa
+            enable_vsan_esa: true
+            enable_vsan_max: false
+        vds_connection:
+          - vds_name: vds01
+        esx_hosts:
+          - hostname: sfo01-w01-r01-esx01.sfo.rainpole.io
+          - hostname: sfo01-w01-r01-esx02.sfo.rainpole.io
+          - hostname: sfo01-w01-r01-esx03.sfo.rainpole.io
+          - hostname: sfo01-w01-r01-esx04.sfo.rainpole.io

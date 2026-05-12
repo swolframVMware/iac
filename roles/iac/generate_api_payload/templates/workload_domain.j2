@@ -1,0 +1,142 @@
+deployWithoutLicenseKeys: true
+domainName: {{ domain if domain is not mapping else domain.name }}
+ssoDomainSpec:
+  ssoDomainName: {{ vsphere.vcenter.sso.domain }}
+  ssoDomainPassword: {{ vcenter_administrator_password | default(vsphere.vcenter.sso.password) }}
+vcenterSpec:
+  name: {{ vsphere.vcenter.hostname.split('.')[0] }}
+  networkDetailsSpec:
+    dnsName: {{ vsphere.vcenter.hostname }}
+    gateway: {{ vsphere.vcenter.gateway  }}
+    subnetMask: {{ vsphere.vcenter.subnet_mask  }}
+  rootPassword: {{ vcenter_root_password | default(vsphere.vcenter.root_password) }}
+  datacenterName: {{ vsphere.datacenter.name }}
+  vmSize: {{ vsphere.vcenter.deployment_size | default('medium') }}
+  storageSize: {{ vsphere.vcenter.storage_size | default('lstorage') }}
+{% if instance.enable_custom_certificates | default(false) %}
+securitySpec:
+  esxiCertsMode: Custom
+  rootCaCerts:
+{% for cert in instance.custom_certificates.root_ca_certs %}
+    - alias: {{ cert.alias }}
+      certChain:
+{% for chain in cert.cert_chain %}
+        - |
+          {{ chain | indent(10) | trim }}
+{% endfor %}
+{% endfor %}
+{% endif %}
+computeSpec:
+  clusterSpecs:
+{% for cluster in vsphere.datacenter.clusters %}
+    - name: {{ cluster.name }}
+      clusterImageId: {{ lcm_image_id }}
+      advancedOptions:
+        highAvailability:
+          enabled: {{ cluster.high_availability }}
+      hostSpecs:
+{% for host in cluster.esx_hosts %}
+        - id: {{ unassigned_usable_host_ids[host.hostname].id }}
+          hostNetworkSpec:
+            vmNics:
+{% for switch in vsphere.networking.distributed_switches %}
+{% for uplink in switch.uplinks %}
+              - id: {{ uplink.vmnic }}
+                uplink: {{ uplink.id }}
+                vdsName: {{ vsphere.datacenter.clusters[0].name }}-{{ switch.name }}
+{% endfor %}
+{% endfor %}
+{% endfor %}
+      datastoreSpec:
+        vsanDatastoreSpec:
+          datastoreName: {{ cluster.storage.vsan.datastore_name }}
+{% if cluster.storage.vsan.vsan_type == 'esa' %}
+          esaConfig:
+            enabled: {{ cluster.storage.vsan.enable_vsan_esa }}
+            vsanMaxConfig:
+              enableVsanMax: {{ cluster.storage.vsan.enable_vsan_max }}
+{% else %}
+          failuresToTolerate: {{ cluster.storage.vsan.failures_to_tolerate | default(1) }}
+{% endif %}
+      networkSpec:
+        nsxClusterSpec:
+          nsxTClusterSpec:
+            uplinkProfiles:
+{% for vds in vsphere.networking.distributed_switches%}
+{% if vds.name == nsx.transport_zone.overlay.port_groups[0].vds_name %}
+              - name: {{ vsphere.datacenter.clusters[0].name }}-{{ vds.uplink_name }}
+                transportVlan: {{ nsx.transport_zone.overlay.port_groups[0].vlan }}
+                teamings:
+                  - name: {{ vds.teaming.name }}
+                    policy: {{ vds.teaming.policy }}
+                    activeUplinks: {{ vds.active_uplinks }}
+                    standByUplinks: {{ vds.standby_uplinks }}
+            ipAddressPoolsSpec:
+              - name: {{ nsx.transport_zone.overlay.port_groups[0].name }}
+                description: {{ nsx.transport_zone.overlay.port_groups[0].description }}
+                ignoreUnavailableNsxtCluster: false
+                subnets:
+                  - ipAddressPoolRanges:
+                    - start: {{ nsx.transport_zone.overlay.port_groups[0].inclusion_range[0].start_ip_address }}
+                      end: {{ nsx.transport_zone.overlay.port_groups[0].inclusion_range[0].end_ip_address }}
+                    cidr: {{ nsx.transport_zone.overlay.port_groups[0].subnet }}
+                    gateway: {{ nsx.transport_zone.overlay.port_groups[0].gateway }}
+{% endif %}
+{% endfor %}
+        vdsSpecs:
+{% for vds in vsphere.networking.distributed_switches %}
+          - name: {{ vsphere.datacenter.clusters[0].name }}-{{ vds.name }}
+            mtu: {{ vds.mtu }}
+            portGroupSpecs:
+{% for key, pg in vsphere.datacenter.clusters[0].mgmt_port_groups.items() %}
+{% if pg.vds_name == vds.name%}
+              - name: {{ pg.name }}
+                transportType: {{ key }}
+                activeUplinks: {{ pg.active_uplinks }}
+                standbyUplinks: {{ pg.standby_uplinks }}
+                teamingPolicy: {{ pg.teaming_policy }}
+{% endif %}
+{% endfor %}
+{% if vds.name in vsphere.networking.distributed_switches[0].name %}
+            nsxtSwitchConfig:
+              transportZones:
+{% if vds.name == nsx.transport_zone.overlay.port_groups[0].vds_name %}
+                - name: {{ nsx.transport_zone.overlay.name }}
+                  transportType: OVERLAY
+{% endif %}
+{% endif %}
+{% endfor %}
+{% for vds in vsphere.networking.distributed_switches %}
+{% if vds.name == nsx.transport_zone.overlay.port_groups[0].vds_name %}
+        networkProfiles:
+          - name: networkConfigProfile
+            isDefault: true
+            nsxtHostSwitchConfigs:
+{% for vds in vsphere.networking.distributed_switches %}
+{% if vds.name == nsx.transport_zone.overlay.port_groups[0].vds_name %}
+              - vdsName: {{ vsphere.datacenter.clusters[0].name }}-{{ vds.name }}
+                ipAddressPoolName: {{ nsx.transport_zone.overlay.port_groups[0].name }}
+                uplinkProfileName: {{ vsphere.datacenter.clusters[0].name }}-{{ vds.uplink_name}}
+                vdsUplinkToNsxUplink:
+{% for uplink in vds.uplinks %}
+                  - vdsUplinkName: {{ uplink.id }}
+                    nsxUplinkName: {{ uplink.nsx }}
+{% endfor %}
+{% endif %}
+{% endfor %}
+{% endif %}
+{% endfor %}
+{% endfor %}
+nsxTSpec:
+  nsxManagerSpecs:
+{% for node in nsx.deployment.nodes %}
+    - name: {{ node.hostname.split('.')[0] }}
+      networkDetailsSpec:
+        dnsName: {{ node.hostname }}
+        gateway: {{ vsphere.vcenter.gateway  }}
+        subnetMask: {{ vsphere.vcenter.subnet_mask }}
+{% endfor %}
+  vipFqdn: {{ nsx.deployment.vip.hostname }}
+  nsxManagerAdminPassword: {{ nsx_admin_password | default(nsx.deployment.admin_password) }}
+  nsxManagerAuditPassword: {{ nsx_audit_password | default(nsx.deployment.audit_password) }}
+  formFactor: {{ nsx.deployment.size | default('medium') }}

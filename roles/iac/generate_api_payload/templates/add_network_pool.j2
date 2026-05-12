@@ -1,0 +1,19 @@
+name: {{ vsphere.datacenter.clusters[0].host_pool.name }}
+networks:
+{% for valid_network in vsphere.datacenter.clusters[0].host_pool.networks %}
+{% for key, network in vsphere.datacenter.clusters[0].mgmt_port_groups.items() %}
+{% if valid_network == key %}
+  - type: {{ key }}
+    vlanId: {{ network.vlan }}
+    mtu: {{ network.mtu }}
+    subnet: {{ network.subnet }}
+    mask: {{ network.subnetMask }}
+    gateway: {{ network.gateway }}
+    ipPools: 
+{% for pool in network.inclusion_range %}
+      - start: {{ pool.start_ip_address }}
+        end: {{ pool.end_ip_address }}
+{% endfor %}
+{% endif %}
+{% endfor %}
+{% endfor %}

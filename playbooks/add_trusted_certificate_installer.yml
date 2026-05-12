@@ -1,0 +1,86 @@
+---
+# Copyright (c) Broadcom. All Rights Reserved.
+# The term "Broadcom" refers solely to the Broadcom Inc. corporate affiliate that
+# distributes this software.
+#
+# You are hereby granted a non-exclusive, worldwide, royalty-free license under
+# Broadcom's copyrights to use, copy, modify, and distribute this software in source
+# code or binary form for use in connection with Broadcom products.
+#
+# This copyright notice shall be included in all copies or substantial portions of the
+# software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+# PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+# CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+# OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+# ----------------------------------------------------------------------------------- #
+# Playbook: Add VCF Installer Trusted Certificate
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This playbook adds a trusted certificate to the VCF Installer trust store.
+#
+# Variables:
+#   All variables can be provided using command-line inputs or a vars file:
+#
+#   Required for IaC Configuration Loading:
+#   - region     : Region identifier (e.g., 'amer', 'emea', 'apac')
+#   - datacenter : Datacenter identifier (e.g., 'dc01', 'dc02')
+#   - az         : Availability zone identifier (e.g., 'az01', 'az02')
+#   - vcf        : VCF instance identifier (e.g., 'lab', 'prod')
+#   - domain     : VCF domain identifier (e.g., 'm01', 'w01')
+#
+#   Required for Certificate Retrieval:
+#   - target_host : The hostname or IP address of the endpoint from which the SSL
+#                   certificate will be retrieved (e.g., the VCF Installer hostname).
+#   - target_port : (Optional) The port number for the SSL connection. Default: 443.
+#
+# Usage Examples:
+#   # Using a vars file:
+#   ansible-playbook playbooks/add_trusted_certificate_installer.yml \
+#     -e @examples/lab/vars/mgmt_automation_settings.yml \
+#     -e "target_host=depot.example.com"
+#
+#   # Using inline variables:
+#   ansible-playbook playbooks/add_trusted_certificate_installer.yml \
+#     -e "region=amer datacenter=dc01 az=az01 vcf=lab domain=m01" \
+#     -e "target_host=depot.example.com target_port=443"
+#
+# ----------------------------------------------------------------------------------- #
+
+- name: Add Trusted Certificate to VCF Installer Trust Store
+  hosts: localhost
+  gather_facts: true
+  environment:
+    no_proxy: "*"
+
+  tasks:
+    - name: Get IaC Settings
+      ansible.builtin.include_role:
+        name: broadcom.vcf.iac.get_settings
+
+    - name: Retrieve SSL Certificate Payload from Target Host
+      ansible.builtin.include_role:
+        name: broadcom.vcf.util.trusted_ssl_certificate
+
+    - name: Check If Trusted Certificate Already Exists in Trust Store
+      broadcom.vcf.vcf_installer_trusted_certificate_info:
+        vcf_installer_hostname: "{{ all_iac_vars.vcf_installer.hostname }}"
+        vcf_installer_user: "{{ all_iac_vars.vcf_installer.username | default('admin@local') }}"
+        vcf_installer_password: "{{ vcf_installer_password | default(all_iac_vars.vcf_installer.password) }}"
+        certificate: "{{ trusted_ssl_certificate_payload.certificate }}"
+      register: trust_store_check
+
+    - name: Add Trusted Certificate to VCF Installer Trust Store
+      ansible.builtin.include_role:
+        name: broadcom.vcf.vcf_installer.trusted_certificate
+      vars:
+        trusted_certificate: "{{ trusted_ssl_certificate_payload.certificate }}"
+        trusted_certificate_usage_type: "{{ trusted_ssl_certificate_payload.certificateUsageType }}"
+      when: not trust_store_check.found
+
+    - name: Display Trusted Certificate Result
+      ansible.builtin.debug:
+        msg: "{{ trust_store_check.msg if trust_store_check.found else trusted_certificate_result.msg }}"

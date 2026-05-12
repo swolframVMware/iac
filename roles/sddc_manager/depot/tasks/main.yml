@@ -1,0 +1,139 @@
+---
+# Copyright (c) Broadcom. All Rights Reserved.
+# The term "Broadcom" refers solely to the Broadcom Inc. corporate affiliate that
+# distributes this software.
+#
+# You are hereby granted a non-exclusive, worldwide, royalty-free license under
+# Broadcom's copyrights to use, copy, modify, and distribute this software in source
+# code or binary form for use in connection with Broadcom products.
+#
+# This copyright notice shall be included in all copies or substantial portions of the
+# software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+# PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+# CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+# OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+# ----------------------------------------------------------------------------------- #
+# Role: sddc_manager.depot
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This role is responsible for managing depot configuration in a VMware Cloud
+#   Foundation instance. It can enable an online depot, an offline depot, or disable
+#   the depot configuration.
+# ----------------------------------------------------------------------------------- #
+
+- name: Find Depot in IaC Configuration
+  ansible.builtin.set_fact:
+    depot_iac_config: "{{ all_iac_vars.depot | default(none) }}"
+
+- name: Validate Depot Type Configuration
+  ansible.builtin.fail:
+    msg: |
+      Invalid depot type configuration.
+      
+      'depot_type' must be one of: 'online', 'offline', or 'disabled'
+  when:
+    - (depot_type is defined and depot_type not in ['online', 'offline', 'disabled']) or
+      (depot_iac_config is not none and depot_iac_config.type is defined and depot_iac_config.type not in ['online', 'offline', 'disabled'])
+
+- name: Get Depot State and Type
+  ansible.builtin.set_fact:
+    depot_state: "{{ depot_state | default('present' if (depot_iac_config.type | default('disabled')) in ['online', 'offline'] else 'absent') }}"
+    depot_type: "{{ depot_type | default(depot_iac_config.type if (depot_iac_config.type | default('disabled')) in ['online', 'offline'] else omit) }}"
+  when: depot_iac_config is not none
+
+- name: Set Online Depot Configuration (Token)
+  when:
+    - depot_iac_config is not none
+    - depot_type is defined
+    - depot_type == 'online'
+    - all_iac_vars.instance.version is version('9.1.0.0', '<')
+  block:
+    - name: Validate Download Token
+      ansible.builtin.fail:
+        msg: |
+          Missing required credential for online depot on VCF < 9.1.0.0.
+
+          'download_token' must be provided via:
+            - Extra variable: depot_download_token
+            - IaC configuration: all_iac_vars.depot.download_token
+      when: depot_download_token | default(depot_iac_config.download_token | default(none)) is none
+
+    - name: Set Download Token
+      ansible.builtin.set_fact:
+        depot_download_token: "{{ depot_download_token | default(depot_iac_config.download_token) }}"
+
+- name: Set Online Depot Configuration (Activation Code)
+  when:
+    - depot_iac_config is not none
+    - depot_type is defined
+    - depot_type == 'online'
+    - all_iac_vars.instance.version is version('9.1.0.0', '>=')
+  block:
+    - name: Validate Download Activation Code
+      ansible.builtin.fail:
+        msg: |
+          Missing required credential for online depot on VCF >= 9.1.0.0.
+
+          'download_activation_code' must be provided via:
+            - Extra variable: depot_download_activation_code
+            - IaC configuration: all_iac_vars.depot.activation_code
+      when: depot_download_activation_code | default(depot_iac_config.activation_code | default(none)) is none
+
+    - name: Set Download Activation Code
+      ansible.builtin.set_fact:
+        depot_download_activation_code: "{{ depot_download_activation_code | default(depot_iac_config.activation_code) }}"
+
+- name: Set Offline Depot Configuration
+  ansible.builtin.set_fact:
+    depot_offline_hostname: "{{ depot_offline_hostname | default(depot_iac_config.hostname) }}"
+    depot_offline_port: "{{ depot_offline_port | default(depot_iac_config.port | default(443)) }}"
+    depot_offline_username: "{{ depot_offline_username | default(depot_iac_config.username) }}"
+    depot_offline_password: "{{ depot_offline_password | default(depot_iac_config.password) }}"
+    depot_offline_ssl_thumbprint: "{{ depot_offline_ssl_thumbprint | default(depot_iac_config.ssl_thumbprint | default(none)) }}"
+  when:
+    - depot_iac_config is not none
+    - depot_type is defined
+    - depot_type == 'offline'
+
+- name: Retrieve SSL Certificate Fingerprint
+  ansible.builtin.include_role:
+    name: broadcom.vcf.util.ssl_fingerprint
+  vars:
+    target_host: "{{ depot_offline_hostname }}"
+    target_port: "{{ depot_offline_port | default(443) }}"
+  when:
+    - depot_type is defined
+    - depot_type == 'offline'
+    - depot_offline_ssl_thumbprint is none or depot_offline_ssl_thumbprint | length == 0
+
+- name: Set SSL Certificate Fingerprint
+  ansible.builtin.set_fact:
+    depot_offline_ssl_thumbprint: "{{ ssl_fingerprint }}"
+  when:
+    - depot_type is defined
+    - depot_type == 'offline'
+    - depot_offline_ssl_thumbprint is none or depot_offline_ssl_thumbprint | length == 0
+
+- name: Set Depot Configuration
+  broadcom.vcf.sddc_manager_depot:
+    sddc_manager_hostname: "{{ all_iac_vars.sddc_manager.hostname }}"
+    sddc_manager_user: "{{ all_iac_vars.vsphere.vcenter.sso.username }}"
+    sddc_manager_password: "{{ vcenter_administrator_password | default(all_iac_vars.vsphere.vcenter.sso.password) }}"
+    state: "{{ depot_state }}"
+    depot_type: "{{ depot_type | default(omit) }}"
+    download_token: "{{ depot_download_token | default(omit) if (depot_type | default('') == 'online' and all_iac_vars.instance.version is version('9.1.0.0', '<')) else omit }}"
+    activation_code: "{{ depot_download_activation_code | default(omit) if (depot_type | default('') == 'online' and all_iac_vars.instance.version is version('9.1.0.0', '>=')) else omit }}"
+    offline_hostname: "{{ depot_offline_hostname | default(omit) }}"
+    offline_port: "{{ depot_offline_port | default(omit) }}"
+    offline_username: "{{ depot_offline_username | default(omit) }}"
+    offline_password: "{{ depot_offline_password | default(omit) }}"
+    offline_ssl_thumbprint: "{{ depot_offline_ssl_thumbprint | default(omit) }}"
+  register: depot_result
+
+- name: Display Depot Result
+  ansible.builtin.debug:
+    msg: "{{ depot_result.msg }}"

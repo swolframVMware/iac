@@ -1,0 +1,92 @@
+---
+# ----------------------------------------------------------------------------------- #
+# NSX Configuration
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This file contains the domain-level configuration for the VMware Cloud Foundation
+#   instance.
+# ----------------------------------------------------------------------------------- #
+
+nsx:
+  deployment:
+    vip:
+      hostname: sfo-w01-nsx01.sfo.rainpole.io
+    nodes:
+      - hostname: sfo-w01-nsx01a.sfo.rainpole.io
+      - hostname: sfo-w01-nsx01b.sfo.rainpole.io
+      - hostname: sfo-w01-nsx01c.sfo.rainpole.io
+  transport_zone:
+    overlay:
+      name: overlay-tz-sfo-w01-nsx01
+      port_groups:
+        - type: host_overlay
+          name: sfo-w01-r01-ip-pool01-host
+          description: sfo-w01-r01-ip-pool01-host
+          subnet: 10.13.14.0/24
+          gateway: 10.13.14.1
+          vlan: 1314
+          vds_name: vds01
+          inclusion_range:
+            - start_ip_address: 10.13.14.101
+              end_ip_address: 10.13.14.132
+  edge_cluster:
+    name: sfo-w01-ec01
+    type: NSX-T
+    form_factor: MEDIUM
+    tier_0_services_high_availability: ACTIVE_ACTIVE
+    mtu: 8900
+    tier_0_routing_type: EBGP
+    asn: 65102
+    tier_0_name: sfo-w01-ec01-t0-gw01
+    tier_1_name: sfo-w01-ec01-t1-gw01
+    skip_tep_routability_check: false
+    profile:
+      type: CUSTOM
+      name: sfo-w01-ecp01
+      bfd_allowed_hop: 255
+      bfd_declare_dead_multiple: 3
+      bfd_probe_interval: 1000
+      standby_relocation_threshold: 30
+    edge_nodes:
+      - node_name: sfo-w01-en01.sfo.rainpole.io
+        management_ip: 10.13.10.135/24
+        management_gateway: 10.13.10.1
+        vm_management_portgroup_vlan: 1310
+        vm_management_portgroup_name: sfo-w01-cl01-vds01-pg-vm-mgmt
+        tep_1_ip: 10.13.19.2/24
+        tep_2_ip: 10.13.19.3/24
+        tep_gateway: 10.13.19.1
+        tep_vlan: 1319
+        inter_rack_cluster: false
+        first_nsx_vds_uplink: uplink1
+        second_nsx_vds_uplink: uplink2
+        uplink_network:
+          - uplink_vlan: 1317
+            uplink_interface_ip: 10.13.17.2/24
+            peer_ip: 10.13.17.10/24
+            peer_asn: 65131
+          - uplink_vlan: 1318
+            uplink_interface_ip: 10.13.18.2/24
+            peer_ip: 10.13.18.10/24
+            peer_asn: 65131
+      - node_name: sfo-w01-en02.sfo.rainpole.io
+        management_ip: 10.13.10.136/24
+        management_gateway: 10.13.10.1
+        vm_management_portgroup_vlan: 1310
+        vm_management_portgroup_name: sfo-w01-cl01-vds01-pg-vm-mgmt
+        tep_1_ip: 10.13.19.4/24
+        tep_2_ip: 10.13.19.5/24
+        tep_gateway: 10.13.19.1
+        tep_vlan: 1319
+        inter_rack_cluster: false
+        first_nsx_vds_uplink: uplink1
+        second_nsx_vds_uplink: uplink2
+        uplink_network:
+          - uplink_vlan: 1317
+            uplink_interface_ip: 10.13.17.3/24
+            peer_ip: 10.13.17.10/24
+            peer_asn: 65131
+          - uplink_vlan: 1318
+            uplink_interface_ip: 10.13.18.3/24
+            peer_ip: 10.13.18.10/24
+            peer_asn: 65131

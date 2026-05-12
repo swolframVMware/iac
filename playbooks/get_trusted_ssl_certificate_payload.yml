@@ -1,0 +1,54 @@
+---
+# Copyright (c) Broadcom. All Rights Reserved.
+# The term "Broadcom" refers solely to the Broadcom Inc. corporate affiliate that
+# distributes this software.
+#
+# You are hereby granted a non-exclusive, worldwide, royalty-free license under
+# Broadcom's copyrights to use, copy, modify, and distribute this software in source
+# code or binary form for use in connection with Broadcom products.
+#
+# This copyright notice shall be included in all copies or substantial portions of the
+# software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+# PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+# CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+# OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+# ----------------------------------------------------------------------------------- #
+# Playbook: Get Trusted SSL Certificate Payload
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This playbook retrieves the SSL certificate from a target endpoint and outputs the
+#   trusted certificate JSON payload required by the add_trusted_certificate API
+#   operations on both VCF Installer and SDDC Manager:
+#
+# Variables:
+#   target_host:            (Required) The hostname or IP address of the target endpoint.
+#   target_port:            (Optional) The port number for the SSL connection. Default: 443.
+#   certificate_usage_type: (Optional) The certificate usage type. Default: TRUSTED_FOR_OUTBOUND.
+#
+# Usage Examples:
+#   ansible-playbook playbooks/get_trusted_ssl_certificate_payload.yml \
+#     -e "target_host=depot.example.com"
+#
+#   ansible-playbook playbooks/get_trusted_ssl_certificate_payload.yml \
+#     -e "target_host=depot.example.com" \
+#     -e "target_port=8443" \
+#     -e "certificate_usage_type=TRUSTED_FOR_OUTBOUND"
+#
+# ----------------------------------------------------------------------------------- #
+
+- name: Get Trusted SSL Certificate Payload
+  hosts: localhost
+  gather_facts: false
+
+  tasks:
+    - name: Get Trusted SSL Certificate Payload
+      ansible.builtin.include_role:
+        name: broadcom.vcf.util.trusted_ssl_certificate
+
+    - name: Display Trusted SSL Certificate Payload
+      ansible.builtin.debug:
+        msg: "{{ trusted_ssl_certificate_payload }}"

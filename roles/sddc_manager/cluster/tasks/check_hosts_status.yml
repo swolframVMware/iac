@@ -1,0 +1,183 @@
+---
+# Copyright (c) Broadcom. All Rights Reserved.
+# The term "Broadcom" refers solely to the Broadcom Inc. corporate affiliate that
+# distributes this software.
+#
+# You are hereby granted a non-exclusive, worldwide, royalty-free license under
+# Broadcom's copyrights to use, copy, modify, and distribute this software in source
+# code or binary form for use in connection with Broadcom products.
+#
+# This copyright notice shall be included in all copies or substantial portions of the
+# software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+# PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+# CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+# OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+# ----------------------------------------------------------------------------------- #
+# Role: sddc_manager.cluster
+# Task: Check Host Status Before Adding a Cluster
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This task checks the commission status of hosts before attempting to add a cluster.
+#   If a host is not in the UNASSIGNED_USEABLE state, it will be commissioned first.
+# ----------------------------------------------------------------------------------- #
+
+- name: Get Cluster Configuration
+  ansible.builtin.set_fact:
+    cluster_config: "{{ all_iac_vars.vsphere.datacenter.clusters | selectattr('name', 'equalto', cluster_input) | first }}"
+
+- name: Validate Hosts Exist in IaC Configuration
+  ansible.builtin.set_fact:
+    defined_hostnames: "{{ cluster_config.esx_hosts | map(attribute='hostname') | list }}"
+
+- name: Check for Undefined Hosts
+  ansible.builtin.set_fact:
+    undefined_hosts: "{{ hosts_input | difference(defined_hostnames) }}"
+
+- name: Fail if Hosts Not Found in IaC Configuration
+  ansible.builtin.fail:
+    msg: >-
+      The following hosts are not defined in the IaC configuration for cluster '{{ cluster_input }}':
+      {{ undefined_hosts | join(', ') }}.
+      Please add them to vsphere.datacenter.clusters[].esx_hosts in your IaC vars or correct the hosts_input list.
+  when:
+    - undefined_hosts is defined
+    - undefined_hosts | length > 0
+
+- name: Set Hosts to Process
+  ansible.builtin.set_fact:
+    hosts_to_process: "{{ hosts_input }}"
+
+- name: Check Host Status
+  broadcom.vcf.sddc_manager_host_info:
+    sddc_manager_hostname: "{{ all_iac_vars.sddc_manager.hostname }}"
+    sddc_manager_user: "{{ all_iac_vars.vsphere.vcenter.sso.username }}"
+    sddc_manager_password: "{{ vcenter_administrator_password | default(all_iac_vars.vsphere.vcenter.sso.password) }}"
+    fqdn: "{{ item }}"
+    format: info
+  register: host_check_results
+  loop: "{{ hosts_to_process }}"
+  failed_when: false
+
+- name: Categorize by Host Status
+  ansible.builtin.set_fact:
+    unassigned_useable_hosts: "{{ host_check_results.results | selectattr('meta', 'defined') | selectattr('meta', 'ne', {}) | map(attribute='meta') | map('dict2items') | flatten | selectattr('value.status', 'defined') | selectattr('value.status', 'equalto', 'UNASSIGNED_USEABLE') | map(attribute='value.fqdn') | list }}"
+    hosts_needing_commission: "{{ host_check_results.results | selectattr('meta', 'defined') | selectattr('meta', 'equalto', {}) | map(attribute='item') | list }}"
+    already_assigned_hosts: "{{ host_check_results.results | selectattr('meta', 'defined') | selectattr('meta', 'ne', {}) | map(attribute='meta') | map('dict2items') | flatten | selectattr('value.status', 'defined') | selectattr('value.status', 'equalto', 'ASSIGNED') | map(attribute='value.fqdn') | list }}"
+    other_status_hosts: "{{ host_check_results.results | selectattr('meta', 'defined') | selectattr('meta', 'ne', {}) | map(attribute='meta') | map('dict2items') | flatten | selectattr('value.status', 'defined') | rejectattr('value.status', 'in', ['UNASSIGNED_USEABLE', 'ASSIGNED']) | map(attribute='value') | list }}"
+
+- name: Display Host Status Summary
+  ansible.builtin.debug:
+    msg:
+      - "Hosts ready to use: {{ unassigned_useable_hosts | length }}"
+      - "Hosts to commission: {{ hosts_needing_commission | length }}"
+
+- name: Fail if Hosts Already Assigned
+  ansible.builtin.fail:
+    msg: "The following hosts are already assigned and cannot be used: {{ already_assigned_hosts | join(', ') }}"
+  when: already_assigned_hosts | length > 0
+
+- name: Warn About Hosts Requiring Manual Intervention
+  ansible.builtin.debug:
+    msg: "The following hosts have unexpected status and require manual review: {{ other_status_hosts | map(attribute='fqdn') | join(', ') }}"
+  when: other_status_hosts | length > 0
+
+- name: Display Hosts Needing Commission
+  ansible.builtin.debug:
+    msg: "{{ ansible_check_mode | ternary('Check Mode: Would commission', 'Commissioning') }} the following hosts: {{ hosts_needing_commission | join(', ') }}"
+  when: hosts_needing_commission | length > 0
+
+- name: Verify ESX Password is Defined
+  ansible.builtin.assert:
+    that:
+      - esx_host_password is defined
+      - esx_host_password | length > 0
+    fail_msg: "esx_host_password must be defined to commission hosts"
+  when: hosts_needing_commission | length > 0
+
+- name: Prepare Hosts
+  ansible.builtin.include_role:
+    name: broadcom.vcf.ops.prep_hosts
+  vars:
+    esx_hosts: "{{ hosts_needing_commission }}"
+    esx_host_user: "root"
+    esx_host_password: "{{ esx_host_password }}"
+  when:
+    - hosts_needing_commission | length > 0
+    - not ansible_check_mode
+
+- name: "Check Mode: Simulate Host Preparation"
+  ansible.builtin.debug:
+    msg: "Check Mode: Simulating successful preparation of hosts: {{ hosts_needing_commission | join(', ') }}"
+  when:
+    - hosts_needing_commission | length > 0
+    - ansible_check_mode
+
+- name: Refresh Host Status
+  broadcom.vcf.sddc_manager_host_info:
+    sddc_manager_hostname: "{{ all_iac_vars.sddc_manager.hostname }}"
+    sddc_manager_user: "{{ all_iac_vars.vsphere.vcenter.sso.username }}"
+    sddc_manager_password: "{{ vcenter_administrator_password | default(all_iac_vars.vsphere.vcenter.sso.password) }}"
+    fqdn: "{{ item }}"
+    format: info
+  register: post_commission_check
+  loop: "{{ hosts_needing_commission }}"
+  when:
+    - hosts_needing_commission | length > 0
+    - not ansible_check_mode
+  failed_when: false
+
+- name: Update Hosts Ready to Use
+  ansible.builtin.set_fact:
+    hosts_ready_to_use: "{{ (unassigned_useable_hosts + (post_commission_check.results | default([]) | selectattr('meta', 'defined') | selectattr('meta', 'ne', {}) | map(attribute='meta') | map('dict2items') | flatten | selectattr('value.status', 'defined') | selectattr('value.status', 'equalto', 'UNASSIGNED_USEABLE') | map(attribute='value.fqdn') | list) + (ansible_check_mode | ternary(hosts_needing_commission, []))) | unique }}"
+
+- name: Initialize Unassigned Usable Host IDs
+  ansible.builtin.set_fact:
+    unassigned_usable_host_ids: {}
+
+- name: Set Unassigned Usable Host IDs
+  ansible.builtin.set_fact:
+    unassigned_usable_host_ids: "{{ unassigned_usable_host_ids | default({}) | combine({item.fqdn: {'id': item.id}}) }}"
+  loop: >-
+    {{ (host_check_results.results | selectattr('meta', 'defined') | selectattr('meta', 'ne', {}) | map(attribute='meta') | map('dict2items') | flatten | selectattr('value.status', 'defined') | selectattr('value.status', 'equalto', 'UNASSIGNED_USEABLE') | map(attribute='value') | list) +
+       (post_commission_check.results | default([]) | selectattr('meta', 'defined') | selectattr('meta', 'ne', {}) | map(attribute='meta') | map('dict2items') | flatten | selectattr('value.status', 'defined') | selectattr('value.status', 'equalto', 'UNASSIGNED_USEABLE') | map(attribute='value') | list) }}
+  when:
+    - not ansible_check_mode
+    - hosts_ready_to_use is defined
+    - hosts_ready_to_use | length > 0
+    - item.fqdn in hosts_ready_to_use
+  loop_control:
+    label: "{{ item.fqdn | default('unknown') }}"
+
+- name: "Check Mode: Set Unassigned Usable Host IDs"
+  ansible.builtin.set_fact:
+    unassigned_usable_host_ids: "{{ unassigned_usable_host_ids | combine({item.fqdn: {'id': item.id}}) }}"
+  loop: >-
+    {{ host_check_results.results | selectattr('meta', 'defined') | selectattr('meta', 'ne', {}) | map(attribute='meta') | map('dict2items') | flatten | selectattr('value.status', 'defined') | selectattr('value.status', 'equalto', 'UNASSIGNED_USEABLE') | map(attribute='value') | list }}
+  when:
+    - ansible_check_mode
+    - hosts_ready_to_use is defined
+    - hosts_ready_to_use | length > 0
+    - item.fqdn in hosts_ready_to_use
+  loop_control:
+    label: "{{ item.fqdn | default('unknown') }}"
+
+- name: "Check Mode: Set Placeholder IDs for Hosts Needing Commission"
+  ansible.builtin.set_fact:
+    unassigned_usable_host_ids: "{{ unassigned_usable_host_ids | combine({item: {'id': 'check-mode-' ~ item | hash('md5') | truncate(8, True, '')}}) }}"
+  loop: "{{ hosts_needing_commission }}"
+  when:
+    - ansible_check_mode
+    - hosts_needing_commission | length > 0
+
+- name: Fail if No Hosts Available to Use
+  ansible.builtin.fail:
+    msg: "No hosts are available to use for the cluster. All hosts are either already assigned or failed commission."
+  when: hosts_ready_to_use | length == 0
+
+- name: Display Hosts Ready to Use
+  ansible.builtin.debug:
+    msg: "The following hosts will be used for cluster {{ cluster_input }}: {{ hosts_ready_to_use | join(', ') }}"

@@ -1,0 +1,50 @@
+---
+# Copyright (c) Broadcom. All Rights Reserved.
+# The term "Broadcom" refers solely to the Broadcom Inc. corporate affiliate that
+# distributes this software.
+#
+# You are hereby granted a non-exclusive, worldwide, royalty-free license under
+# Broadcom's copyrights to use, copy, modify, and distribute this software in source
+# code or binary form for use in connection with Broadcom products.
+#
+# This copyright notice shall be included in all copies or substantial portions of the
+# software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+# PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+# CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+# OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+# ----------------------------------------------------------------------------------- #
+# Role: sddc_manager.ntp
+# Task: Update NTP Configuration
+# ----------------------------------------------------------------------------------- #
+# Description:
+# This task updates ntp configuration in a VMware Cloud Foundation instance.
+# ----------------------------------------------------------------------------------- #
+
+- name: Update NTP Configuration
+  broadcom.vcf.sddc_manager_ntp:
+    sddc_manager_hostname: "{{ all_iac_vars.sddc_manager.hostname }}"
+    sddc_manager_user: "{{ all_iac_vars.vsphere.vcenter.sso.username }}"
+    sddc_manager_password: "{{ vcenter_administrator_password | default(all_iac_vars.vsphere.vcenter.sso.password) }}"
+    ntp_config: "{{ ntp_config }}"
+    state: "{{ ntp_state }}"
+  register: ntp_result
+
+- name: Fail if Task Returned Errors
+  ansible.builtin.fail:
+    msg: "Failed to update NTP. Errors: {{ ntp_result.meta.errors | default([]) | to_nice_yaml }}"
+  when:
+    - not ansible_check_mode
+    - ntp_result.meta is defined
+    - ntp_result.meta.errors is defined
+    - ntp_result.meta.errors | length > 0
+
+- name: Display Status Message
+  ansible.builtin.debug:
+    msg: "NTP configuration update to {{ ntp_state | upper }} completed with status: {{ ntp_result.msg }}."
+  when:
+    - not ansible_check_mode
+    - ntp_result is defined

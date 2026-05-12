@@ -1,0 +1,69 @@
+---
+# Copyright (c) Broadcom. All Rights Reserved.
+# The term "Broadcom" refers solely to the Broadcom Inc. corporate affiliate that
+# distributes this software.
+#
+# You are hereby granted a non-exclusive, worldwide, royalty-free license under
+# Broadcom's copyrights to use, copy, modify, and distribute this software in source
+# code or binary form for use in connection with Broadcom products.
+#
+# This copyright notice shall be included in all copies or substantial portions of the
+# software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+# PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+# CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+# OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+# ----------------------------------------------------------------------------------- #
+# Role: vcf_installer.bundle_info
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This role is responsible for retrieving bundle information from a VCF Installer
+#   instance.
+# ----------------------------------------------------------------------------------- #
+
+- name: Validate Bundle Operation Variable
+  ansible.builtin.assert:
+    that:
+      - bundle_operation is defined
+      - bundle_operation in ['list', 'get_by_id', 'download_status']
+    fail_msg: "bundle_operation must be defined and set to 'list', 'get_by_id', or 'download_status'"
+
+- name: Find Bundle Configuration in IaC
+  ansible.builtin.set_fact:
+    bundle_iac_config: "{{ all_iac_vars.bundle | default(none) }}"
+
+- name: Set Bundle Filter Parameters from IaC (Single Release - Legacy Support)
+  ansible.builtin.set_fact:
+    bundle_release_version: "{{ bundle_release_version | default(bundle_iac_config.release_version | default(omit)) }}"
+    bundle_is_compliant: "{{ bundle_is_compliant | default(bundle_iac_config.compliant_only | default(omit)) }}"
+  when:
+    - bundle_iac_config is not none
+    - bundle_iac_config.release_version is defined
+
+- name: Set Bundle Filter Parameters from IaC (Multiple Releases - New Format)
+  ansible.builtin.set_fact:
+    bundle_releases_config: "{{ bundle_iac_config.releases | default([]) }}"
+  when:
+    - bundle_iac_config is not none
+    - bundle_iac_config.releases is defined
+
+- name: Get Bundle Information
+  broadcom.vcf.vcf_installer_bundle_info:
+    vcf_installer_hostname: "{{ all_iac_vars.vcf_installer.hostname }}"
+    vcf_installer_user: "{{ all_iac_vars.vcf_installer.username | default('admin@local') }}"
+    vcf_installer_password: "{{ vcf_installer_password | default(all_iac_vars.vcf_installer.password) }}"
+    operation: "{{ bundle_operation }}"
+    bundle_id: "{{ bundle_id | default(omit) }}"
+    product_type: "{{ bundle_product_type | default(omit) }}"
+    is_compliant: "{{ bundle_is_compliant | default(omit) }}"
+    bundle_type: "{{ bundle_type | default(omit) }}"
+    release_version: "{{ bundle_release_version | default(omit) }}"
+  register: bundle_info
+
+- name: Display Bundle Information
+  ansible.builtin.debug:
+    msg: "{{ bundle_info.msg }}"
+  when: bundle_info.msg is defined

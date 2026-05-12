@@ -1,0 +1,69 @@
+---
+# Copyright (c) Broadcom. All Rights Reserved.
+# The term "Broadcom" refers solely to the Broadcom Inc. corporate affiliate that
+# distributes this software.
+#
+# You are hereby granted a non-exclusive, worldwide, royalty-free license under
+# Broadcom's copyrights to use, copy, modify, and distribute this software in source
+# code or binary form for use in connection with Broadcom products.
+#
+# This copyright notice shall be included in all copies or substantial portions of the
+# software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+# PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+# CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+# OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+# ----------------------------------------------------------------------------------- #
+# Role: sddc_manager.workload_domain
+# Task: Add Workload Domain
+# ----------------------------------------------------------------------------------- #
+# Description:
+# This task adds a workload domain in a VMware Cloud Foundation instance.
+# ----------------------------------------------------------------------------------- #
+
+- name: Add Workload Domain
+  broadcom.vcf.sddc_manager_workload_domain:
+    sddc_manager_hostname: "{{ all_iac_vars.sddc_manager.hostname }}"
+    sddc_manager_user: "{{ all_iac_vars.vsphere.vcenter.sso.username }}"
+    sddc_manager_password: "{{ sddc_manager_admin_password | default(all_iac_vars.sddc_manager.admin_password) }}"
+    state: present
+    workload_domain_payload: "{{ api_payload_json }}"
+  register: add_result
+
+- name: Set Add Workload Domain Result ID
+  ansible.builtin.set_fact:
+    workload_domain_task_id: "{{ add_result.meta.id | default(omit) }}"
+  when:
+    - not ansible_check_mode
+    - add_result.meta.id is defined
+
+- name: Wait for Add Workload Domain Task to Complete
+  broadcom.vcf.sddc_manager_tasks_status:
+    sddc_manager_hostname: "{{ all_iac_vars.sddc_manager.hostname }}"
+    sddc_manager_user: "{{ all_iac_vars.vsphere.vcenter.sso.username }}"
+    sddc_manager_password: "{{ sddc_manager_admin_password | default(all_iac_vars.sddc_manager.admin_password) }}"
+    task_id: "{{ workload_domain_task_id }}"
+    sddc_manager_task_type: wld_domain
+    validation: false
+    retries: 180
+    delay: 120
+  register: add_task_result
+  when:
+    - not ansible_check_mode
+    - workload_domain_task_id is defined
+
+- name: Fail if Add Workload Domain Task Returned Errors
+  ansible.builtin.fail:
+    msg: "Failed to add workload domain. Error codes: {{ add_task_result.meta.error_codes }}"
+  when:
+    - not ansible_check_mode
+    - workload_domain_task_id is defined
+    - add_task_result.meta is defined
+    - add_task_result.meta.error_codes is defined
+
+- name: Display Add Result
+  ansible.builtin.debug:
+    msg: "{{ add_result.msg }}"

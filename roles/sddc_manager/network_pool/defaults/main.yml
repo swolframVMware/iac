@@ -1,0 +1,8 @@
+---
+# Default desired state of the network pool(s) managed by this role.
+
+# Valid values: present, absent
+network_pool_state: present
+
+# Template name for add network pool payload.
+network_pool_add_template_name: "add_network_pool.j2"

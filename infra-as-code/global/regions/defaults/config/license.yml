@@ -1,0 +1,11 @@
+---
+# ----------------------------------------------------------------------------------- #
+# Default License Server Configuration
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This file contains the default configuration settings for the License Server
+#   in a VMware Cloud Foundation deployment.
+# ----------------------------------------------------------------------------------- #
+
+license:
+  use_existing_deployment: false

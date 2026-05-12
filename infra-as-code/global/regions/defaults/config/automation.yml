@@ -1,0 +1,16 @@
+---
+# ----------------------------------------------------------------------------------- #
+# Default VCF Automation Configuration
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This file contains the default configuration settings for VCF Automation in a
+#   VMware Cloud Foundation deployment.
+#
+# Options:
+#   automation.size: large, medium, small (Default: medium)
+#     Note: This is an override of the size defined in at the instance-level.
+# ----------------------------------------------------------------------------------- #
+
+automation:
+  use_existing_deployment: false
+  enable_vcf_automation: true

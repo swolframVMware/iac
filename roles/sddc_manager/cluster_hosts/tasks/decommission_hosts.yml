@@ -1,0 +1,55 @@
+---
+# Copyright (c) Broadcom. All Rights Reserved.
+# The term "Broadcom" refers solely to the Broadcom Inc. corporate affiliate that
+# distributes this software.
+#
+# You are hereby granted a non-exclusive, worldwide, royalty-free license under
+# Broadcom's copyrights to use, copy, modify, and distribute this software in source
+# code or binary form for use in connection with Broadcom products.
+#
+# This copyright notice shall be included in all copies or substantial portions of the
+# software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+# PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+# CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+# OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+# ----------------------------------------------------------------------------------- #
+# Role: sddc_manager.cluster_hosts
+# Task: Decommission Removed Hosts
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This task decommissions hosts that were removed from the cluster.
+#   It is only executed when decommission_removed_hosts is true (the default).
+# ----------------------------------------------------------------------------------- #
+
+- name: Verify Hosts Ready to Remove List is Available
+  ansible.builtin.assert:
+    that:
+      - hosts_ready_to_remove is defined
+      - hosts_ready_to_remove | length > 0
+    fail_msg: "No hosts found to decommission. Host information must be collected before decommissioning."
+    success_msg: "Found {{ hosts_ready_to_remove | length }} host(s) to decommission."
+  when: not ansible_check_mode
+
+- name: Decommission Removed Hosts
+  ansible.builtin.include_role:
+    name: broadcom.vcf.sddc_manager.host
+  vars:
+    hosts_input: "{{ hosts_ready_to_remove }}"
+    host_state: absent
+    host_validate: false
+  when: not ansible_check_mode
+
+- name: Display Decommission Summary
+  ansible.builtin.debug:
+    msg: >-
+      {{ ansible_check_mode | ternary(
+        'Check Mode: Would decommission',
+        'Successfully decommissioned'
+      ) }}
+      {{ hosts_ready_to_remove | length }}
+      host(s) from cluster '{{ cluster_input }}': {{ hosts_ready_to_remove | join(', ') }}
+

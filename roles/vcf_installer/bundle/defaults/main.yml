@@ -1,0 +1,21 @@
+---
+# Default variables for the bundle role.
+
+# Required: Desired state of bundle.
+# Valid values: present, stopped, absent
+# bundle_state: present
+
+# Required: Bundle ID to manage.
+# bundle_id: "e6ba8240-d9b7-11ef-bf62-63832c57ab1a"
+
+# Optional: Whether to wait for the download task to complete (applicable when bundle_state: present).
+# Default: false
+bundle_wait_for_completion: false
+
+# Optional: Maximum time in seconds to wait for task completion (applicable when bundle_wait_for_completion: true).
+# Default: 3600 (1 hour)
+bundle_timeout: 3600
+
+# Optional: If true, only binary files from storage will be deleted (applicable when bundle_state: absent).
+# Default: false
+bundle_binary_files_only: false

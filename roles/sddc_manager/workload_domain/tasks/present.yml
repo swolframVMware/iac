@@ -1,0 +1,42 @@
+---
+# Copyright (c) Broadcom. All Rights Reserved.
+# The term "Broadcom" refers solely to the Broadcom Inc. corporate affiliate that
+# distributes this software.
+#
+# You are hereby granted a non-exclusive, worldwide, royalty-free license under
+# Broadcom's copyrights to use, copy, modify, and distribute this software in source
+# code or binary form for use in connection with Broadcom products.
+#
+# This copyright notice shall be included in all copies or substantial portions of the
+# software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+# PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+# CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+# OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+# ----------------------------------------------------------------------------------- #
+# Role: sddc_manager.workload_domain
+# Task: Ensure Workload Domain is Present
+# ----------------------------------------------------------------------------------- #
+# Description:
+# This task ensures that a specified workload domain is added in a VMware Cloud
+# Foundation instance. The task performs the following steps:
+# - Prepare hosts for workload domain creation.
+# - Generate the workload domain payload.
+# - Validate the workload domain payload.
+# - Add the workload domain.
+# ----------------------------------------------------------------------------------- #
+
+- name: Check Hosts for Workload Domain Allocation
+  ansible.builtin.include_tasks: check_hosts.yml
+
+- name: Generate Add Workload Domain Payload
+  ansible.builtin.include_tasks: generate_add_payload.yml
+
+- name: Validate Add Workload Domain Payload
+  ansible.builtin.include_tasks: validate_add_payload.yml
+
+- name: Add Workload Domain
+  ansible.builtin.include_tasks: add_domain.yml

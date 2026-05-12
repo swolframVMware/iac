@@ -1,0 +1,49 @@
+---
+# Copyright (c) Broadcom. All Rights Reserved.
+# The term "Broadcom" refers solely to the Broadcom Inc. corporate affiliate that
+# distributes this software.
+#
+# You are hereby granted a non-exclusive, worldwide, royalty-free license under
+# Broadcom's copyrights to use, copy, modify, and distribute this software in source
+# code or binary form for use in connection with Broadcom products.
+#
+# This copyright notice shall be included in all copies or substantial portions of the
+# software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+# PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+# CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+# OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+# ----------------------------------------------------------------------------------- #
+# Role: sddc_manager.cluster
+# Task: Ensure Cluster is Absent
+# ----------------------------------------------------------------------------------- #
+# Description:
+# This task ensures that a specified cluster is removed from a VMware Cloud
+# Foundation instance. The task performs the following steps:
+# - Look up the cluster by name -> ID.
+# - Collect host information (if decommissioning is enabled).
+# - Remove the cluster.
+# - Wait for the removal task to complete.
+# - Decommission hosts (if enabled).
+# ----------------------------------------------------------------------------------- #
+
+- name: Lookup Cluster by Name
+  ansible.builtin.include_tasks: lookup_cluster.yml
+
+- name: Get Cluster Host Information
+  ansible.builtin.include_tasks: decommission_info.yml
+  when:
+    - cluster_decommission_hosts | bool
+
+- name: Remove Cluster
+  ansible.builtin.include_tasks: remove_cluster.yml
+
+- name: Decommission Cluster Hosts
+  ansible.builtin.include_tasks: decommission_resources.yml
+  when:
+    - cluster_decommission_hosts | bool
+    - hosts_to_decommission is defined
+    - hosts_to_decommission | length > 0

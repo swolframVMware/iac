@@ -1,0 +1,11 @@
+---
+# Default host status filter for host_info role.
+# Valid values: ASSIGNED, UNASSIGNED_USEABLE, UNASSIGNED_UNUSEABLE, or omit for all hosts
+host_status_filter: null
+
+# Default output format.
+# Valid values: info, id
+host_info_format: info
+
+# Optional: Specific host FQDN to query.
+host_fqdn: null

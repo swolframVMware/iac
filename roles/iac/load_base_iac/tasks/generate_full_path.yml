@@ -1,0 +1,42 @@
+---
+# Input:
+#   - iac_pattern: Path pattern with placeholders. (e.g., "global/regions/<region>/datacenters/<datacenter>")
+
+- name: Extract Placeholders and Variables from Pattern
+  ansible.builtin.set_fact:
+    pattern_items: "{{ iac_pattern | regex_findall('<(.*?)>') }}"
+    generated_path: "{{ iac_pattern }}"
+  no_log: true
+
+# - broadcom.vcf.redact_debug:
+#     var: pattern_items
+
+- name: Replace Placeholders with Variable Values or Wildcards
+  ansible.builtin.set_fact:
+    generated_path: "{{ generated_path | regex_replace('<' + item + '>', vars[item] | default('.*')) }}"
+  loop: "{{ pattern_items }}"
+  loop_control:
+    loop_var: item
+    label: "Processing placeholder"
+  no_log: true
+
+# - broadcom.vcf.redact_debug:
+#     var: generated_path
+
+- name: Replace Wildcard Paths
+  ansible.builtin.set_fact:
+    generated_path: "{{ generated_path | replace('//', '/.*/')}}"
+  no_log: true
+
+# - broadcom.vcf.redact_debug:
+#     var: generated_path
+
+- name: Query Partial Paths
+  ansible.builtin.include_tasks: query_partial_paths.yml
+  when: "'.*' in generated_path"
+
+- name: Convert Path to Array
+  ansible.builtin.set_fact:
+    gen_path_list: "{{ generated_path.split('/') }}"
+  no_log: true
+

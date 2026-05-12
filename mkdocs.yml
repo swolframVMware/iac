@@ -1,0 +1,224 @@
+---
+# Copyright (c) Broadcom. All Rights Reserved.
+# The term "Broadcom" refers solely to the Broadcom Inc. corporate affiliate that
+# distributes this software.
+#
+# You are hereby granted a non-exclusive, worldwide, royalty-free license under
+# Broadcom's copyrights to use, copy, modify, and distribute this software in source
+# code or binary form for use in connection with Broadcom products.
+#
+# This copyright notice shall be included in all copies or substantial portions of the
+# software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+# PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+# CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+# OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+# ----------------------------------------------------------------------------------- #
+# Project Information
+# ----------------------------------------------------------------------------------- #
+site_name: Ansible Collection for VMware Cloud Foundation
+site_description: Ansible Collection for VMware Cloud Foundation
+site_url: https://github-vcf.devops.broadcom.net/pages/pso/ansible-collection-vcf/
+site_author: Broadcom
+docs_dir: docs
+site_dir: .site
+use_directory_urls: true
+
+# ----------------------------------------------------------------------------------- #
+# Repository
+# ----------------------------------------------------------------------------------- #
+repo_name: GitHub Enterprise
+repo_url: https://github-vcf.devops.broadcom.net/pso/ansible-collection-vcf
+edit_uri: blob/main/docs/
+
+# ----------------------------------------------------------------------------------- #
+# Copyright
+# ----------------------------------------------------------------------------------- #
+copyright: |
+  Copyright (c) Broadcom. All Rights Reserved.<br/>
+  The term "Broadcom" refers solely to the Broadcom Inc. corporate affiliate that
+  distributes this software.<br/><br/>
+
+# ----------------------------------------------------------------------------------- #
+# Configuration
+# ----------------------------------------------------------------------------------- #
+theme:
+  name: material
+  favicon: assets/images/favicon.ico
+  logo: assets/images/logo.png
+  icon:
+    repo: fontawesome/brands/github
+  palette:
+  - media: "(prefers-color-scheme: light)"
+    scheme: default
+    primary: indigo
+    accent: indigo
+    toggle:
+      icon: material/toggle-switch
+      name: Dark Theme
+  - media: "(prefers-color-scheme: dark)"
+    scheme: slate
+    primary: indigo
+    accent: indigo
+    toggle:
+      icon: material/toggle-switch-off-outline
+      name: Light Theme
+  font:
+    text: Roboto
+    code: Roboto Mono
+  features:
+  - content.action.edit
+  - content.action.view
+  - content.code.annotate
+  - content.code.copy
+  - content.tabs.link
+  - navigation.footer
+  - navigation.header
+  - navigation.indexes
+  - navigation.instant
+  - navigation.sections
+  - navigation.tabs
+  - navigation.tabs.sticky
+  - navigation.top
+  - navigation.tracking
+  - search.highlight
+  - search.share
+  - search.suggest
+  - toc.follow
+
+# ----------------------------------------------------------------------------------- #
+# Plugins
+# ----------------------------------------------------------------------------------- #
+plugins:
+- search:
+    separator: '[\s\u200b\-,:!=\[\]()"`/]+|\.(?!\d)|&[lg]t;|(?!\b)(?=[A-Z][a-z])'
+- open-in-new-tab
+- git-revision-date-localized:
+    enabled: !ENV [CI, false]
+    enable_creation_date: false
+    exclude:
+      - precheck.md
+    fallback_to_build_date: true
+    type: timeago
+- "ansible-collection":
+    collections:
+      - fqcn: "broadcom.vcf"
+- render_swagger:
+    allow_arbitrary_locations : true
+
+# ----------------------------------------------------------------------------------- #
+# Hooks
+# ----------------------------------------------------------------------------------- #
+hooks:
+  - docs/hooks.py
+
+# ----------------------------------------------------------------------------------- #
+# Customization
+# ----------------------------------------------------------------------------------- #
+extra:
+  config:
+    repo_url: https://github-vcf.devops.broadcom.net/pso/ansible-collection-vcf
+  version:
+    default: latest
+    provider: mike
+extra_css:
+  - assets/stylesheets/extra.css
+
+# Extensions
+markdown_extensions:
+- admonition
+- attr_list
+- footnotes
+- md_in_html
+- pymdownx.emoji:
+    emoji_index: !!python/name:material.extensions.emoji.twemoji
+    emoji_generator: !!python/name:material.extensions.emoji.to_svg
+    options:
+      custom_icons:
+      - material/.icons
+- pymdownx.inlinehilite
+- pymdownx.highlight:
+    use_pygments: true
+- pymdownx.snippets:
+    check_paths: true
+- pymdownx.superfences:
+    custom_fences:
+    - name: mermaid
+      class: mermaid
+      format: !!python/name:pymdownx.superfences.fence_code_format
+- pymdownx.tabbed:
+    alternate_style: true
+- pymdownx.details
+- tables
+- toc:
+    permalink: true
+
+# ----------------------------------------------------------------------------------- #
+# Navigation
+# ----------------------------------------------------------------------------------- #
+nav:
+- Home:
+    - index.md
+- Design:
+    - Collection Design: design/high-level-design.md
+    - Implementation Plan: design/implementation-plan.md
+    - Infrastructure-as-Code: design/infrastructure-as-code/index.md
+    - Get Settings: design/infrastructure-as-code/get-settings.md
+    - Loader: design/infrastructure-as-code/iac-loader.md
+- Features:
+    - features/index.md
+    - Day 1:
+        - Prerequisites: features/day1/deployment-prerequisites.md
+        - Host Prechecks: features/day1/precheck/precheck.md
+        - Host Connection: features/day1/precheck/host-connection.md
+        - Host SSH Service: features/day1/precheck/host-ssh-service.md
+        - Host NTP Settings: features/day1/precheck/host-ntp-settings.md
+        - Host Network Configuration: features/day1/precheck/host-network-configuration.md
+        - Manage Installer Deployment: features/day1/installer-deployment.md
+        - Manage Installer CEIP Settings: features/day1/ceip-installer.md
+        - Manage Installer Proxy Settings: features/day1/proxy-installer.md
+        - Manage Installer Trusted Certificates: features/day1/trusted-certificate-installer.md
+        - Manage Installer Depot Settings: features/day1/depot-installer.md
+        - Manage Installer Bundles: features/day1/bundle-installer.md
+        - Deploy Instance: features/day1/instance.md
+    - Day 2:
+        - Manage Network Pools: features/day2/network-pool.md
+        - Manage Hosts: features/day2/host.md
+        - Manage Workload Domains: features/day2/workload-domain.md
+        - Manage Clusters: features/day2/cluster.md
+        - Manage Cluster Hosts: features/day2/cluster-hosts.md
+        - Manage NSX Edge Clusters: features/day2/nsx-edge-cluster.md
+        - Manage Trusted Certificates: features/day2/trusted-certificate.md
+        - Manage Depot Settings: features/day2/depot.md
+        - Manage CEIP Settings: features/day2/ceip.md
+        - Manage Proxy Settings: features/day2/proxy.md
+        - Manage NTP Settings: features/day2/ntp.md
+        - Manage DNS Settings: features/day2/dns.md
+        - Manage Backup Settings: features/day2/backup.md
+        - Manage Certificate Authority Settings: features/day2/certificate-authority.md
+    - Utilities:
+        - features/utilities/index.md
+        - Manage Vaulted Passwords: features/utilities/ansible-vault.md
+        - SSH ECDSA Fingerprint: features/utilities/ssh-ecdsa-fingerprint.md
+        - SSL Certificate Fingerprint: features/utilities/ssl-fingerprint.md
+        - Trusted SSL Certificate Payload: features/utilities/trusted-ssl-certificate-payload.md
+- Module Reference: broadcom.vcf
+- API Reference Guides:
+    - 9.1.0.0:
+        - SDDC Manager: api/vcf-api-9.1.0.0.md
+        - VCF Installer: api/vcf-installer-api-9.1.0.0.md
+        - VCF Operations: api/vcf-operations-api-9.1.0.0.md
+        - VCF Fleet LCM: api/vcf-fleet-lcm-api-9.1.0.0.md
+    - 9.0.2.0:
+        - SDDC Manager: api/vcf-api-9.0.2.0.md
+        - VCF Installer: api/vcf-installer-api-9.0.2.0.md
+        - VCF Operations: api/vcf-operations-api-9.0.2.0.md
+- Community:
+    - community/index.md
+    - Contributing: community/contributing.md
+    - Coding Guidelines: community/coding-guidelines.md
+    - Code of Conduct: community/code-of-conduct.md

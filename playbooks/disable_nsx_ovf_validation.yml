@@ -1,0 +1,74 @@
+---
+# Copyright (c) Broadcom. All Rights Reserved.
+# The term "Broadcom" refers solely to the Broadcom Inc. corporate affiliate that
+# distributes this software.
+#
+# You are hereby granted a non-exclusive, worldwide, royalty-free license under
+# Broadcom's copyrights to use, copy, modify, and distribute this software in source
+# code or binary form for use in connection with Broadcom products.
+#
+# This copyright notice shall be included in all copies or substantial portions of the
+# software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+# PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+# HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+# CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
+# OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+# ----------------------------------------------------------------------------------- #
+# Playbook: Disable NSX OVF Validation
+# ----------------------------------------------------------------------------------- #
+# Description:
+#   This playbook disables the OVF Validation in NSX so we can deploy Edge Nodes in
+#   version impacted by the bug
+#
+# Variables:
+#   All variables can be provided using command-line inputs or a vars file:
+#
+#   - region                : Region identifier (e.g., 'amer', 'emea', 'apac')
+#   - datacenter            : Datacenter identifier (e.g., 'dc01', 'dc02')
+#   - az                    : Availability zone identifier (e.g., 'az01', 'az02')
+#   - vcf                   : VCF instance identifier (e.g., 'lab', 'prod')
+#   - domain                : VCF workload domain identifier (e.g., 'w01')
+#   - ssh_service_state     : Start/Stop SSH Service (present/absent)
+#   - ovf_validation_state  : Enable/Disable OVF Validation (present/absent)
+#
+# Usage Examples:
+#   # Using a vars file:
+#   ansible-playbook playbooks/disable_nsx_ovf_validation.yml \
+#     -e @examples/lab/vars/wld_automation_settings.yml
+#
+#   # Using inline variables:
+#   ansible-playbook playbooks/disable_nsx_ovf_validation.yml \
+#     -e "region=amer datacenter=dc01 az=az01 vcf=lab domain=w01 ssh_service_state=present"
+#
+# ----------------------------------------------------------------------------------- #
+
+- name: Disable OVF Validation on NSX Managers
+  hosts: localhost
+  gather_facts: true
+  environment:
+    no_proxy: "*"
+
+  tasks:
+    - name: Get IaC Settings
+      ansible.builtin.include_role:
+        name: broadcom.vcf.iac.get_settings
+
+    - name: Start SSH Service on NSX Managers
+      ansible.builtin.include_role:
+        name: broadcom.vcf.nsx.ssh_service
+      vars:
+        ssh_service_state: present
+        nsx_managers: "{{ all_iac_vars.nsx.deployment.nodes }}"
+
+    - name: Disable OVF Validation on NSX Managers
+      ansible.builtin.include_role:
+        name: broadcom.vcf.nsx.ovf_validation
+      vars:
+        ansible_ssh_user: "root"
+        ansible_ssh_pass: "{{ nsx_root_password }}"
+        ansible_host_key_checking: false
+        ovf_validation_state: absent
+        nsx_managers: "{{ all_iac_vars.nsx.deployment.nodes }}"

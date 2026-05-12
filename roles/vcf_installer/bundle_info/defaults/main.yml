@@ -1,0 +1,25 @@
+---
+# Default variables for the bundle_info role.
+
+# Required: Type of information to retrieve.
+# Valid values: list, get_by_id, download_status
+# bundle_operation: download_status
+
+# Optional: Bundle ID (required for get_by_id, optional for download_status).
+# bundle_id: "e6ba8240-d9b7-11ef-bf62-63832c57ab1a"
+
+# Optional: Filter by product type (for list operation).
+# Valid values: VCENTER, NSX_T_MANAGER, SDDC_MANAGER, VRSLCM, VROPS, VCF_OPS_CLOUD_PROXY, VRA
+# bundle_product_type: VCENTER
+
+# Optional: Filter by compliance with current VCF version (for list operation).
+# bundle_is_compliant: true
+
+# Optional: Filter by bundle type (for list operation).
+# Valid values: SDDC_MANAGER, VMWARE_SOFTWARE, VXRAIL
+# bundle_type: VMWARE_SOFTWARE
+
+# Optional: Filter by release version (for download_status operation).
+# bundle_release_version: "9.0.0.0"
+
+# Note: VCF Installer automatically filters for INSTALL bundles only.
